@@ -37,25 +37,25 @@ export GLPKSolver,
 
 
 type GLPKSolver <: LinprogSolver
-    inner::GLPK.Prob()
-    params::GLPK.SimplexParam()
+    inner::GLPK.Prob
+    param::GLPK.SimplexParam
 end
 
 function model()
-    lpm = GLPKSolver(GLPK.SimplexParam())
+    lpm = GLPKSolver(GLPK.Prob(), GLPK.SimplexParam())
     lpm.param.msg_lev = GLPK.MSG_ERR
-    lpm.param.presolve = GLPK.ON
+    #lpm.param.presolve = GLPK.ON
     return lpm
 end
 
 function loadproblem(lpm::GLPKSolver, filename::String)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
        read_mps(lpm.inner, GLPK.MPS_FILE, filename)
-   elseif endswith(filename, ".lp") || endswith(filename, ".lp.gz")
+    elseif endswith(filename, ".lp") || endswith(filename, ".lp.gz")
        read_lp(lpm.inner, filename)
-   elseif endswith(filename, ".prob") || endswith(filename, ".prob.gz")
+    elseif endswith(filename, ".prob") || endswith(filename, ".prob.gz")
        read_prob(lpm.inner, filename)
-   else
+    else
        error("unrecognized input format extension in $filename")
     end
 end   
@@ -71,21 +71,21 @@ function loadproblem(lpm::GLPKSolver, A::AbstractMatrix, collb, colub, obj, rowl
         error("empty problem matrix A")
     end
 
-    function checksize(x, l, str) = 
+    function checksize(x, l, str)
         if nonnull(x) && length(x) != l
             error("size of $str is incompatible with size of A")
         end
     end
 
-    checksize(collb, m, "collb")
-    checksize(colub, m, "colub")
-    checksize(rowlb, n, "rowlb")
-    checksize(rowub, n, "rowub")
+    checksize(collb, n, "collb")
+    checksize(colub, n, "colub")
+    checksize(rowlb, m, "rowlb")
+    checksize(rowub, m, "rowub")
     checksize(obj, n, "obj")
 
     (ia, ja, ar) = findnz(A)
 
-    glp_erase_prob(lp)
+    GLPK.erase_prob(lp)
 
     function getbounds(lb, ub, i)
         if nonnull(lb) && nonnull(ub) && lb[i] != -Inf && ub[i] != Inf
@@ -95,9 +95,9 @@ function loadproblem(lpm::GLPKSolver, A::AbstractMatrix, collb, colub, obj, rowl
                 return lb[i], ub[i], GLPK.FX
             end
         elseif nonnull(lb) && lb[i] != -Inf
-            return lb[i], Inf, GLPK.LB
+            return lb[i], Inf, GLPK.LO
         elseif nonnull(ub) && ub[i] != Inf
-            return -Inf, ub[i], GLPK.UB
+            return -Inf, ub[i], GLPK.UP
         else
             return -Inf, Inf, GLPK.FR
         end
@@ -111,6 +111,12 @@ function loadproblem(lpm::GLPKSolver, A::AbstractMatrix, collb, colub, obj, rowl
     end
 
     GLPK.add_cols(lp, n)
+    for c = 1:n
+        #println("  r=$r b=$(b[r])")
+        l, u, t = getbounds(collb, colub, c)
+        GLPK.set_col_bnds(lp, c, t, l, u)
+    end
+
     if nonnull(obj)
         for c = 1:n
             GLPK.set_obj_coef(lp, c, obj[c])
@@ -119,13 +125,6 @@ function loadproblem(lpm::GLPKSolver, A::AbstractMatrix, collb, colub, obj, rowl
         for c = 1:n
             GLPK.set_obj_coef(lp, c, 0)
         end
-    end
-
-    GLPK.add_cols(lp, n)
-    for c = 1:n
-        #println("  r=$r b=$(b[r])")
-        l, u, t = getbounds(collb, colub, c)
-        GLPK.set_col_bnds(lp, c, t, l, u)
     end
 
     GLPK.load_matrix(lp, ia, ja, ar)
@@ -168,11 +167,11 @@ function setvarLB(lpm::GLPKSolver, collb)
                     GLPK.set_col_bnds(lp, c, GLPK.FX, l, u)
                 end
             else
-                GLPK.set_col_bnds(lp, c, GLPK.LB, l, 0.0)
+                GLPK.set_col_bnds(lp, c, GLPK.LO, l, 0.0)
             end
         else
             if u < Inf
-                GLPK.set_col_bnds(lp, c, GLPK.UB, 0.0, u)
+                GLPK.set_col_bnds(lp, c, GLPK.UP, 0.0, u)
             else
                 GLPK.set_col_bnds(lp, c, GLPK.FR, 0.0, 0.0)
             end
@@ -214,11 +213,11 @@ function setvarUB(lpm::GLPKSolver, colub)
                     GLPK.set_col_bnds(lp, c, GLPK.FX, l, u)
                 end
             else
-                GLPK.set_col_bnds(lp, c, GLPK.UB, 0.0, u)
+                GLPK.set_col_bnds(lp, c, GLPK.UP, 0.0, u)
             end
         else
             if l > -Inf
-                GLPK.set_col_bnds(lp, c, GLPK.LB, l, 0.0)
+                GLPK.set_col_bnds(lp, c, GLPK.LO, l, 0.0)
             else
                 GLPK.set_col_bnds(lp, c, GLPK.FR, 0.0, 0.0)
             end
@@ -243,7 +242,7 @@ end
 function setconstrLB(lpm::GLPKSolver, rowlb)
     lp = lpm.inner
     m = get_num_rows(lp)
-    if nonnull(collb) && length(rowlb) != m
+    if nonnull(rowlb) && length(rowlb) != m
         error("invalid size of rowlb")
     end
     for r = 1:m
@@ -252,7 +251,7 @@ function setconstrLB(lpm::GLPKSolver, rowlb)
             u = Inf
         end
         if nonnull(rowlb) && rowlb[r] != -Inf
-            l = rowlb[c]
+            l = rowlb[r]
             if u < Inf
                 if l != u
                     GLPK.set_row_bnds(lp, r, GLPK.DB, l, u)
@@ -260,11 +259,11 @@ function setconstrLB(lpm::GLPKSolver, rowlb)
                     GLPK.set_row_bnds(lp, r, GLPK.FX, l, u)
                 end
             else
-                GLPK.set_row_bnds(lp, r, GLPK.LB, l, 0.0)
+                GLPK.set_row_bnds(lp, r, GLPK.LO, l, 0.0)
             end
         else
             if u < Inf
-                GLPK.set_row_bnds(lp, r, GLPK.UB, 0.0, u)
+                GLPK.set_row_bnds(lp, r, GLPK.UP, 0.0, u)
             else
                 GLPK.set_row_bnds(lp, r, GLPK.FR, 0.0, 0.0)
             end
@@ -277,7 +276,7 @@ function getconstrUB(lpm::GLPKSolver)
     m = get_num_rows(lp)
     ub = Array(Float64, m)
     for r = 1:m
-        u = get_col_ub(lp, r)
+        u = get_row_ub(lp, r)
         if u >= realmax(Float64)
             u = Inf
         end
@@ -306,11 +305,11 @@ function setconstrUB(lpm::GLPKSolver, rowub)
                     GLPK.set_row_bnds(lp, r, GLPK.FX, l, u)
                 end
             else
-                GLPK.set_row_bnds(lp, r, GLPK.UB, 0.0, u)
+                GLPK.set_row_bnds(lp, r, GLPK.UP, 0.0, u)
             end
         else
             if l > -Inf
-                GLPK.set_row_bnds(lp, r, GLPK.LB, l, 0.0)
+                GLPK.set_row_bnds(lp, r, GLPK.LO, l, 0.0)
             else
                 GLPK.set_row_bnds(lp, r, GLPK.FR, 0.0, 0.0)
             end
@@ -344,7 +343,7 @@ function setobj(lpm::GLPKSolver, obj)
     end
 end
 
-function addvar(lpm::GLPKSolver, rowidx::Vector, rowcoef::Vector, collb::Real, colub::Real, objcoef:Real)
+function addvar(lpm::GLPKSolver, rowidx::Vector, rowcoef::Vector, collb::Real, colub::Real, objcoef::Real)
     if length(rowidx) != length(rowcoef)
         error("rowidx and rowcoef have different legths")
     end
@@ -359,9 +358,9 @@ function addvar(lpm::GLPKSolver, rowidx::Vector, rowcoef::Vector, collb::Real, c
             bt = GLPK.FX
         end
     elseif collb > -Inf
-        bt = GLPK.LB
+        bt = GLPK.LO
     elseif colub < Inf
-        bt = GLPK.UB
+        bt = GLPK.UP
     else
         bt = GLPK.FR
     end
@@ -385,9 +384,9 @@ function addconstr(lpm::GLPKSolver, colidx::Vector, colcoef::Vector, rowlb::Real
             bt = GLPK.FX
         end
     elseif rowlb > -Inf
-        bt = GLPK.LB
+        bt = GLPK.LO
     elseif rowub < Inf
-        bt = GLPK.UB
+        bt = GLPK.UP
     else
         bt = GLPK.FR
     end
@@ -423,7 +422,7 @@ end
 numvar(lpm::GLPKSolver) = GLPK.get_num_cols(lpm.inner) 
 numconstr(lpm::GLPKSolver) = GLPK.get_num_rows(lpm.inner)
 
-optimize(lpm::GLPKSolver) = GLPK.simplex(lpm.inner, lpm.params)
+optimize(lpm::GLPKSolver) = GLPK.simplex(lpm.inner, lpm.param)
 
 function status(lpm::GLPKSolver)
    s = GLPK.get_status(lpm.inner)
@@ -445,8 +444,6 @@ function status(lpm::GLPKSolver)
 end
 
 getobjval(lpm::GLPKSolver) = GLPK.get_obj_val(lpm.inner)
-
-# TODO
 
 function getsolution(lpm::GLPKSolver)
     lp = lpm.inner
