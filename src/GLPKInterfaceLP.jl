@@ -37,23 +37,59 @@ export
 
 type GLPKSolverLP <: GLPKSolver
     inner::GLPK.Prob
-    param::GLPK.SimplexParam
+    method::Symbol
+    param::Union(GLPK.SimplexParam, GLPK.InteriorParam)
 end
 
-function model(;kwargs...)
+function model(;presolve=false, method=:Simplex, kwargs...)
     if length(kwargs) != 0
-        warn("GLPK LP solver does not yet support options")
+        warn("Unknown option(s) to GLPK LP solver: ", join([string(x[1]) for x in kwargs], ", "))
     end
-    lpm = GLPKSolverLP(GLPK.Prob(), GLPK.SimplexParam())
-    lpm.param.msg_lev = GLPK.MSG_ERR
-    #lpm.param.presolve = GLPK.ON
+    if method == :Simplex || method == :Exact
+        param = GLPK.SimplexParam()
+        if presolve
+            param.presolve = GLPK.ON
+        end
+    elseif method == :InteriorPoint
+        param = GLPK.InteriorParam()
+        if presolve
+            warn("Ignored option: presolve")
+        end
+    else
+        error("""
+              Unknown method for GLPK LP solver: $method"
+                     Allowed methods:
+                       :Simplex
+                       :Exact
+                       :InteriorPoint""")
+    end
+    param.msg_lev = GLPK.MSG_ERR
+    lpm = GLPKSolverLP(GLPK.Prob(), method, param)
     return lpm
 end
 
-optimize(lpm::GLPKSolverLP) = GLPK.simplex(lpm.inner, lpm.param)
+function optimize(lpm::GLPKSolverLP)
+    if lpm.method == :Simplex
+        solve = GLPK.simplex
+    elseif lpm.method == :Exact
+        solve = GLPK.exact
+    elseif lpm.method == :InteriorPoint
+        solve = GLPK.interior
+    else
+        error("bug")
+    end
+    return solve(lpm.inner, lpm.param)
+end
 
 function status(lpm::GLPKSolverLP)
-   s = GLPK.get_status(lpm.inner)
+   if lpm.method == :Simplex || lpm.method == :Exact
+       get_status = GLPK.get_status
+   elseif lpm.method == :InteriorPoint
+       get_status = GLPK.ipt_status
+   else
+       error("bug")
+   end
+   s = get_status(lpm.inner)
    if s == GLPK.OPT
        return :Optimal
    elseif s == GLPK.INFEAS
@@ -71,15 +107,32 @@ function status(lpm::GLPKSolverLP)
    end
 end
 
-getobjval(lpm::GLPKSolverLP) = GLPK.get_obj_val(lpm.inner)
+function getobjval(lpm::GLPKSolverLP)
+    if lpm.method == :Simplex || lpm.method == :Exact
+        get_obj_val = GLPK.get_obj_val
+    elseif lpm.method == :InteriorPoint
+        get_obj_val = GLPK.ipt_obj_val
+    else
+        error("bug")
+    end
+    return get_obj_val(lpm.inner)
+end
 
 function getsolution(lpm::GLPKSolverLP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
+    if lpm.method == :Simplex || lpm.method == :Exact
+        get_col_prim = GLPK.get_col_prim
+    elseif lpm.method == :InteriorPoint
+        get_col_prim = GLPK.ipt_col_prim
+    else
+        error("bug")
+    end
+
     x = Array(Float64, n)
     for c = 1:n
-        x[c] = GLPK.get_col_prim(lp, c)
+        x[c] = get_col_prim(lp, c)
     end
     return x
 end
@@ -88,9 +141,17 @@ function getconstrsolution(lpm::GLPKSolverLP)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
+    if lpm.method == :Simplex || lpm.method == :Exact
+        get_row_prim = GLPK.get_row_prim
+    elseif lpm.method == :InteriorPoint
+        get_row_prim = GLPK.ipt_row_prim
+    else
+        error("bug")
+    end
+
     x = Array(Float64, m)
     for r = 1:m
-        x[r] = GLPK.get_row_prim(lp, r)
+        x[r] = get_row_prim(lp, r)
     end
     return x
 end
@@ -99,9 +160,17 @@ function getreducedcosts(lpm::GLPKSolverLP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
+    if lpm.method == :Simplex || lpm.method == :Exact
+        get_col_dual = GLPK.get_col_dual
+    elseif lpm.method == :InteriorPoint
+        get_col_dual = GLPK.ipt_col_dual
+    else
+        error("bug")
+    end
+
     x = Array(Float64, n)
     for c = 1:n
-        x[c] = GLPK.get_col_dual(lp, c)
+        x[c] = get_col_dual(lp, c)
     end
     return x
 end
@@ -110,12 +179,19 @@ function getconstrduals(lpm::GLPKSolverLP)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
+    if lpm.method == :Simplex || lpm.method == :Exact
+        get_row_dual = GLPK.get_row_dual
+    elseif lpm.method == :InteriorPoint
+        get_row_dual = GLPK.ipt_row_dual
+    else
+        error("bug")
+    end
+
     x = Array(Float64, m)
     for r = 1:m
-        x[r] = GLPK.get_row_dual(lp, r)
+        x[r] = get_row_dual(lp, r)
     end
     return x
 end
-
 
 end
