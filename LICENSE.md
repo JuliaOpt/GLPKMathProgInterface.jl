@@ -1,4 +1,4 @@
-The GLPKSolverInterface.jl Julia module is licensed under the MIT License:
+The GLPKMathProgInterface.jl Julia module is licensed under the MIT License:
 
 > Copyright (c) 2013: Carlo Baldassi
 >
