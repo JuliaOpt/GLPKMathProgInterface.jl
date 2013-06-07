@@ -39,16 +39,20 @@ export
 type GLPKSolverMIP <: GLPKSolver
     inner::GLPK.Prob
     param::GLPK.IntoptParam
+    smplxparam::GLPK.SimplexParam
     objbound::Vector{Float64}
 end
 
-function model(;kwargs...)
+function model(;presolve=false, kwargs...)
     if length(kwargs) != 0
-        warn("GLPK MIP solver does not yet support options")
+        warn("Unknown option(s) to GLPK MIP solver: ", join([string(x[1]) for x in kwargs], ", "))
     end
-    lpm = GLPKSolverMIP(GLPK.Prob(), GLPK.IntoptParam(), [-Inf])
+    lpm = GLPKSolverMIP(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(), [-Inf])
     lpm.param.msg_lev = GLPK.MSG_ERR
-    lpm.param.presolve = GLPK.ON
+    lpm.smplxparam.msg_lev = GLPK.MSG_ERR
+    if presolve
+        lpm.param.presolve = GLPK.ON
+    end
 
     function cb_callback(tree::Ptr{Void}, info::Ptr{Void})
         bn = GLPK.ios_best_node(tree)
@@ -107,12 +111,25 @@ function getvartype(lpm::GLPKSolverMIP)
     return coltype
 end
 
-optimize(lpm::GLPKSolverMIP) = GLPK.intopt(lpm.inner, lpm.param)
+function optimize(lpm::GLPKSolverMIP)
+    if lpm.param.presolve == GLPK.OFF
+        ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
+        ret_ps != 0 && return ret_ps
+    end
+    GLPK.intopt(lpm.inner, lpm.param)
+end
 
 function status(lpm::GLPKSolverMIP)
    s = GLPK.mip_status(lpm.inner)
+   if s == GLPK.UNDEF && lpm.param.presolve == GLPK.OFF
+       s = GLPK.get_status(lpm.inner)
+   end
    if s == GLPK.OPT
        return :Optimal
+   elseif s == GLPK.INFEAS
+       return :Infeasible
+   elseif s == GLPK.UNBND
+       return :Unbounded
    elseif s == GLPK.FEAS
        return :Feasible
    elseif s == GLPK.NOFEAS
