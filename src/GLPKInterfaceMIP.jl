@@ -43,14 +43,14 @@ type GLPKSolverMIP <: GLPKSolver
     objbound::Vector{Float64}
 end
 
-function model(;presolve=false, kwargs...)
+function model(;GLPKpresolve=false, kwargs...)
     if length(kwargs) != 0
         warn("Unknown option(s) to GLPK MIP solver: ", join([string(x[1]) for x in kwargs], ", "))
     end
     lpm = GLPKSolverMIP(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(), [-Inf])
     lpm.param.msg_lev = GLPK.MSG_ERR
     lpm.smplxparam.msg_lev = GLPK.MSG_ERR
-    if presolve
+    if GLPKpresolve
         lpm.param.presolve = GLPK.ON
     end
 

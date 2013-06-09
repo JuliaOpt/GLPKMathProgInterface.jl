@@ -41,30 +41,30 @@ type GLPKSolverLP <: GLPKSolver
     param::Union(GLPK.SimplexParam, GLPK.InteriorParam)
 end
 
-function model(;presolve=false, method=:Simplex, kwargs...)
+function model(;GLPKpresolve=false, GLPKmethod=:Simplex, kwargs...)
     if length(kwargs) != 0
         warn("Unknown option(s) to GLPK LP solver: ", join([string(x[1]) for x in kwargs], ", "))
     end
-    if method == :Simplex || method == :Exact
+    if GLPKmethod == :Simplex || GLPKmethod == :Exact
         param = GLPK.SimplexParam()
-        if presolve
-            param.presolve = GLPK.ON
+        if GLPKpresolve
+            param.GLPKpresolve = GLPK.ON
         end
-    elseif method == :InteriorPoint
+    elseif GLPKmethod == :InteriorPoint
         param = GLPK.InteriorParam()
-        if presolve
-            warn("Ignored option: presolve")
+        if GLPKpresolve
+            warn("Ignored option: GLPKpresolve")
         end
     else
         error("""
-              Unknown method for GLPK LP solver: $method"
+              Unknown method for GLPK LP solver: $GLPKmethod
                      Allowed methods:
                        :Simplex
                        :Exact
                        :InteriorPoint""")
     end
     param.msg_lev = GLPK.MSG_ERR
-    lpm = GLPKSolverLP(GLPK.Prob(), method, param)
+    lpm = GLPKSolverLP(GLPK.Prob(), GLPKmethod, param)
     return lpm
 end
 
