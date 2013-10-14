@@ -31,7 +31,7 @@ Example:
 
 ```Julia
 using MathProgBase
-sol = mixintprog(-[5,3,3], [1 8 2], '<', 9, 'I', 0, 1, MIPSolver(presolve=true))
+sol = mixintprog(-[5,3,3], [1 8 2], '<', 9, 'I', 0, 1, MIPSolver(:GLPK, presolve=true))
 ```
 
 [GLPK.jl]: https://github.com/JuliaOpt/GLPK.jl
