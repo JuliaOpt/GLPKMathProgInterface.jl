@@ -34,5 +34,5 @@ using MathProgBase
 sol = mixintprog(-[5,3,3], [1 8 2], '<', 9, 'I', 0, 1, MIPSolver(presolve=true))
 ```
 
-[GLPK.jl]: https://github.com/carlobaldassi/GLPK.jl
+[GLPK.jl]: https://github.com/JuliaOpt/GLPK.jl
 [MathProgBase.jl]: https://github.com/JuliaOpt/MathProgBase.jl
