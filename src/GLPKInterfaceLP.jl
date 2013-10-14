@@ -57,7 +57,7 @@ function model(;presolve=false, method=:Simplex, kwargs...)
         end
     else
         error("""
-              Unknown method for GLPK LP solver: $method"
+              Unknown method for GLPK LP solver: $method
                      Allowed methods:
                        :Simplex
                        :Exact
