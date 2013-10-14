@@ -118,10 +118,10 @@ end
 
 function getvarLB(lpm::GLPKSolver)
     lp = lpm.inner
-    n = get_num_cols(lp)
+    n = GLPK.get_num_cols(lp)
     lb = Array(Float64, n)
     for c = 1:n
-        l = get_col_lb(lp, c)
+        l = GLPK.get_col_lb(lp, c)
         if l <= -realmax(Float64)
             l = -Inf
         end
@@ -132,12 +132,12 @@ end
 
 function setvarLB(lpm::GLPKSolver, collb)
     lp = lpm.inner
-    n = get_num_cols(lp)
+    n = GLPK.get_num_cols(lp)
     if nonnull(collb) && length(collb) != n
         error("invalid size of collb")
     end
     for c = 1:n
-        u = get_col_ub(lp, c)
+        u = GLPK.get_col_ub(lp, c)
         if u >= realmax(Float64)
             u = Inf
         end
@@ -164,10 +164,10 @@ end
 
 function getvarUB(lpm::GLPKSolver)
     lp = lpm.inner
-    n = get_num_cols(lp)
+    n = GLPK.get_num_cols(lp)
     ub = Array(Float64, n)
     for c = 1:n
-        u = get_col_ub(lp, c)
+        u = GLPK.get_col_ub(lp, c)
         if u >= realmax(Float64)
             u = Inf
         end
@@ -178,12 +178,12 @@ end
 
 function setvarUB(lpm::GLPKSolver, colub)
     lp = lpm.inner
-    n = get_num_cols(lp)
+    n = GLPK.get_num_cols(lp)
     if nonnull(colub) && length(colub) != n
         error("invalid size of colub")
     end
     for c = 1:n
-        l = get_col_lb(lp, c)
+        l = GLPK.get_col_lb(lp, c)
         if l <= -realmax(Float64)
             l = -Inf
         end
@@ -210,10 +210,10 @@ end
 
 function getconstrLB(lpm::GLPKSolver)
     lp = lpm.inner
-    m = get_num_rows(lp)
+    m = GLPK.get_num_rows(lp)
     lb = Array(Float64, m)
     for r = 1:m
-        l = get_row_lb(lp, r)
+        l = GLPK.get_row_lb(lp, r)
         if l <= -realmax(Float64)
             l = -Inf
         end
@@ -224,12 +224,12 @@ end
 
 function setconstrLB(lpm::GLPKSolver, rowlb)
     lp = lpm.inner
-    m = get_num_rows(lp)
+    m = GLPK.get_num_rows(lp)
     if nonnull(rowlb) && length(rowlb) != m
         error("invalid size of rowlb")
     end
     for r = 1:m
-        u = get_row_ub(lp, r)
+        u = GLPK.get_row_ub(lp, r)
         if u >= realmax(Float64)
             u = Inf
         end
@@ -256,10 +256,10 @@ end
 
 function getconstrUB(lpm::GLPKSolver)
     lp = lpm.inner
-    m = get_num_rows(lp)
+    m = GLPK.get_num_rows(lp)
     ub = Array(Float64, m)
     for r = 1:m
-        u = get_row_ub(lp, r)
+        u = GLPK.get_row_ub(lp, r)
         if u >= realmax(Float64)
             u = Inf
         end
@@ -270,12 +270,12 @@ end
 
 function setconstrUB(lpm::GLPKSolver, rowub)
     lp = lpm.inner
-    m = get_num_rows(lp)
+    m = GLPK.get_num_rows(lp)
     if nonnull(rowub) && length(rowub) != m
         error("invalid size of rowub")
     end
     for r = 1:m
-        l = get_row_lb(lp, r)
+        l = GLPK.get_row_lb(lp, r)
         if l <= -realmax(Float64)
             l = -Inf
         end
@@ -302,10 +302,10 @@ end
 
 function getobj(lpm::GLPKSolver)
     lp = lpm.inner
-    n = get_num_cols(lp)
+    n = GLPK.get_num_cols(lp)
     obj = Array(Float64, n)
     for c = 1:n
-        l = get_obj_coef(lp, c)
+        l = GLPK.get_obj_coef(lp, c)
         obj[c] = l
     end
     return obj
@@ -313,7 +313,7 @@ end
 
 function setobj(lpm::GLPKSolver, obj)
     lp = lpm.inner
-    n = get_num_cols(lp)
+    n = GLPK.get_num_cols(lp)
     if nonnull(obj) && length(obj) != n
         error("invalid size of obj")
     end
