@@ -2,11 +2,11 @@ module GLPKInterfaceBase
 
 import GLPK
 
-require(joinpath(Pkg.dir("MathProgBase"),"src","LinprogSolverInterface.jl"))
-importall LinprogSolverInterface
+require(joinpath(Pkg.dir("MathProgBase"),"src","MathProgSolverInterface.jl"))
+importall MathProgSolverInterface
 
 export
-    GLPKSolver,
+    GLPKMathProgModel,
     loadproblem,
     writeproblem,
     getvarLB,
@@ -29,9 +29,9 @@ export
     getrawsolver
 
 
-abstract GLPKSolver <: LinprogSolver
+abstract GLPKMathProgModel <: AbstractMathProgSolver
 
-function loadproblem(lpm::GLPKSolver, filename::String)
+function loadproblem(lpm::GLPKMathProgModel, filename::String)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
        read_mps(lpm.inner, GLPK.MPS_FILE, filename)
     elseif endswith(filename, ".lp") || endswith(filename, ".lp.gz")
@@ -45,7 +45,7 @@ end
 
 nonnull(x) = (x != Nothing && !isempty(x))
 
-function loadproblem(lpm::GLPKSolver, A::AbstractMatrix, collb, colub, obj, rowlb, rowub)
+function loadproblem(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, obj, rowlb, rowub)
     lp = lpm.inner
 
     m, n = size(A)
@@ -116,7 +116,7 @@ end
 
 #writeproblem(m, filename::String)
 
-function getvarLB(lpm::GLPKSolver)
+function getvarLB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     lb = Array(Float64, n)
@@ -130,7 +130,7 @@ function getvarLB(lpm::GLPKSolver)
     return lb
 end
 
-function setvarLB(lpm::GLPKSolver, collb)
+function setvarLB(lpm::GLPKMathProgModel, collb)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     if nonnull(collb) && length(collb) != n
@@ -162,7 +162,7 @@ function setvarLB(lpm::GLPKSolver, collb)
     end
 end
 
-function getvarUB(lpm::GLPKSolver)
+function getvarUB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     ub = Array(Float64, n)
@@ -176,7 +176,7 @@ function getvarUB(lpm::GLPKSolver)
     return ub
 end
 
-function setvarUB(lpm::GLPKSolver, colub)
+function setvarUB(lpm::GLPKMathProgModel, colub)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     if nonnull(colub) && length(colub) != n
@@ -208,7 +208,7 @@ function setvarUB(lpm::GLPKSolver, colub)
     end
 end
 
-function getconstrLB(lpm::GLPKSolver)
+function getconstrLB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
     lb = Array(Float64, m)
@@ -222,7 +222,7 @@ function getconstrLB(lpm::GLPKSolver)
     return lb
 end
 
-function setconstrLB(lpm::GLPKSolver, rowlb)
+function setconstrLB(lpm::GLPKMathProgModel, rowlb)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
     if nonnull(rowlb) && length(rowlb) != m
@@ -254,7 +254,7 @@ function setconstrLB(lpm::GLPKSolver, rowlb)
     end
 end
 
-function getconstrUB(lpm::GLPKSolver)
+function getconstrUB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
     ub = Array(Float64, m)
@@ -268,7 +268,7 @@ function getconstrUB(lpm::GLPKSolver)
     return ub
 end
 
-function setconstrUB(lpm::GLPKSolver, rowub)
+function setconstrUB(lpm::GLPKMathProgModel, rowub)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
     if nonnull(rowub) && length(rowub) != m
@@ -300,7 +300,7 @@ function setconstrUB(lpm::GLPKSolver, rowub)
     end
 end
 
-function getobj(lpm::GLPKSolver)
+function getobj(lpm::GLPKMathProgModel)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     obj = Array(Float64, n)
@@ -311,7 +311,7 @@ function getobj(lpm::GLPKSolver)
     return obj
 end
 
-function setobj(lpm::GLPKSolver, obj)
+function setobj(lpm::GLPKMathProgModel, obj)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     if nonnull(obj) && length(obj) != n
@@ -326,7 +326,7 @@ function setobj(lpm::GLPKSolver, obj)
     end
 end
 
-function addvar(lpm::GLPKSolver, rowidx::Vector, rowcoef::Vector, collb::Real, colub::Real, objcoef::Real)
+function addvar(lpm::GLPKMathProgModel, rowidx::Vector, rowcoef::Vector, collb::Real, colub::Real, objcoef::Real)
     if length(rowidx) != length(rowcoef)
         error("rowidx and rowcoef have different legths")
     end
@@ -352,7 +352,7 @@ function addvar(lpm::GLPKSolver, rowidx::Vector, rowcoef::Vector, collb::Real, c
     return
 end
 
-function addconstr(lpm::GLPKSolver, colidx::Vector, colcoef::Vector, rowlb::Real, rowub::Real)
+function addconstr(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, rowlb::Real, rowub::Real)
     if length(colidx) != length(colcoef)
         error("colidx and colcoef have different legths")
     end
@@ -377,9 +377,9 @@ function addconstr(lpm::GLPKSolver, colidx::Vector, colcoef::Vector, rowlb::Real
     return
 end
 
-updatemodel(m::GLPKSolver) = nothing
+updatemodel(m::GLPKMathProgModel) = nothing
 
-function setsense(lpm::GLPKSolver, sense)
+function setsense(lpm::GLPKMathProgModel, sense)
     lp = lpm.inner
     if sense == :Min
         GLPK.set_obj_dir(lp, GLPK.MIN)
@@ -390,7 +390,7 @@ function setsense(lpm::GLPKSolver, sense)
     end
 end
 
-function getsense(lpm::GLPKSolver)
+function getsense(lpm::GLPKMathProgModel)
     lp = lpm.inner
     s = GLPK.get_obj_dir(lp)
     if s == GLPK.MIN
@@ -402,10 +402,10 @@ function getsense(lpm::GLPKSolver)
     end
 end
 
-numvar(lpm::GLPKSolver) = GLPK.get_num_cols(lpm.inner) 
-numconstr(lpm::GLPKSolver) = GLPK.get_num_rows(lpm.inner)
+numvar(lpm::GLPKMathProgModel) = GLPK.get_num_cols(lpm.inner) 
+numconstr(lpm::GLPKMathProgModel) = GLPK.get_num_rows(lpm.inner)
 
-getrawsolver(lpm::GLPKSolver) = lpm.inner
+getrawsolver(lpm::GLPKMathProgModel) = lpm.inner
 
 end
 

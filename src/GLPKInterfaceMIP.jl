@@ -1,7 +1,7 @@
 module GLPKInterfaceMIP
 
 import GLPK
-importall LinprogSolverInterface
+importall MathProgSolverInterface
 importall ..GLPKInterfaceBase
 
 export
@@ -36,21 +36,23 @@ export
     getconstrduals,
     getrawsolver
 
-type GLPKSolverMIP <: GLPKSolver
+type GLPKMathProgModelMIP <: GLPKMathProgModel
     inner::GLPK.Prob
     param::GLPK.IntoptParam
     smplxparam::GLPK.SimplexParam
     objbound::Vector{Float64}
 end
 
-function model(;presolve=false, kwargs...)
-    if length(kwargs) != 0
-        warn("Unknown option(s) to GLPK MIP solver: ", join([string(x[1]) for x in kwargs], ", "))
-    end
-    lpm = GLPKSolverMIP(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(), [-Inf])
+type GLPKSolverMIP <: AbstractMathProgSolver
+    presolve::Bool
+    GLPKSolverMIP(;presolve::Bool=false) = new(presolve)
+end
+
+function model(s::GLPKSolverMIP)
+    lpm = GLPKMathProgModelMIP(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(), [-Inf])
     lpm.param.msg_lev = GLPK.MSG_ERR
     lpm.smplxparam.msg_lev = GLPK.MSG_ERR
-    if presolve
+    if s.presolve
         lpm.param.presolve = GLPK.ON
     end
 
@@ -69,7 +71,7 @@ function model(;presolve=false, kwargs...)
     return lpm
 end
 
-function setsense(lpm::GLPKSolverMIP, sense)
+function setsense(lpm::GLPKMathProgModelMIP, sense)
     lp = lpm.inner
     if sense == :Min
         GLPK.set_obj_dir(lp, GLPK.MIN)
@@ -82,7 +84,7 @@ function setsense(lpm::GLPKSolverMIP, sense)
     end
 end
 
-function setvartype(lpm::GLPKSolverMIP, vartype)
+function setvartype(lpm::GLPKMathProgModelMIP, vartype)
     lp = lpm.inner
     ncol = numvar(lpm)
     @assert length(vartype) == ncol
@@ -100,7 +102,7 @@ function setvartype(lpm::GLPKSolverMIP, vartype)
     end
 end
 
-function getvartype(lpm::GLPKSolverMIP)
+function getvartype(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     ncol = numvar(m)
     coltype = Array(Char, ncol)
@@ -111,7 +113,7 @@ function getvartype(lpm::GLPKSolverMIP)
     return coltype
 end
 
-function optimize(lpm::GLPKSolverMIP)
+function optimize(lpm::GLPKMathProgModelMIP)
     if lpm.param.presolve == GLPK.OFF
         ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
         ret_ps != 0 && return ret_ps
@@ -119,7 +121,7 @@ function optimize(lpm::GLPKSolverMIP)
     GLPK.intopt(lpm.inner, lpm.param)
 end
 
-function status(lpm::GLPKSolverMIP)
+function status(lpm::GLPKMathProgModelMIP)
    s = GLPK.mip_status(lpm.inner)
    if s == GLPK.UNDEF && lpm.param.presolve == GLPK.OFF
        s = GLPK.get_status(lpm.inner)
@@ -141,11 +143,11 @@ function status(lpm::GLPKSolverMIP)
    end
 end
 
-getobjval(lpm::GLPKSolverMIP) = GLPK.mip_obj_val(lpm.inner)
+getobjval(lpm::GLPKMathProgModelMIP) = GLPK.mip_obj_val(lpm.inner)
 
-getobjbound(lp::GLPKSolverMIP) = lp.objbound[1]
+getobjbound(lp::GLPKMathProgModelMIP) = lp.objbound[1]
 
-function getsolution(lpm::GLPKSolverMIP)
+function getsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
@@ -156,7 +158,7 @@ function getsolution(lpm::GLPKSolverMIP)
     return x
 end
 
-function getconstrsolution(lpm::GLPKSolverMIP)
+function getconstrsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 

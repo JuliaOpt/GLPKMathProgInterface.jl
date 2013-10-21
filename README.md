@@ -16,7 +16,8 @@ Example:
 
 ```Julia
 using MathProgBase
-sol = linprog([-1,0], [2 1], '<', 1.5, LPSolver(:GLPK, method=:Exact, presolve=true)
+using GLPKMathProgInterface
+sol = linprog([-1,0], [2 1], '<', 1.5, GLPKSolverLP(method=:Exact, presolve=true)
 ```
 
 The mixed integer programming solver accepts the following optional
@@ -31,7 +32,8 @@ Example:
 
 ```Julia
 using MathProgBase
-sol = mixintprog(-[5,3,3], [1 8 2], '<', 9, 'I', 0, 1, MIPSolver(:GLPK, presolve=true))
+using GLPKMathProgInterface
+sol = mixintprog(-[5,3,3], [1 8 2], '<', 9, 'I', 0, 1, GLPKSolverMIP(presolve=true))
 ```
 
 [GLPK.jl]: https://github.com/JuliaOpt/GLPK.jl

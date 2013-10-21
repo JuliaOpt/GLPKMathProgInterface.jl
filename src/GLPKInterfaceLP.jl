@@ -1,7 +1,7 @@
 module GLPKInterfaceLP
 
 import GLPK
-importall LinprogSolverInterface
+importall MathProgSolverInterface
 importall ..GLPKInterfaceBase
 
 export
@@ -35,40 +35,47 @@ export
     getconstrduals,
     getrawsolver
 
-type GLPKSolverLP <: GLPKSolver
+type GLPKMathProgModelLP <: GLPKMathProgModel
     inner::GLPK.Prob
     method::Symbol
     param::Union(GLPK.SimplexParam, GLPK.InteriorParam)
 end
 
-function model(;presolve=false, method=:Simplex, kwargs...)
-    if length(kwargs) != 0
-        warn("Unknown option(s) to GLPK LP solver: ", join([string(x[1]) for x in kwargs], ", "))
+type GLPKSolverLP <: AbstractMathProgSolver
+    presolve::Bool
+    method::Symbol
+    function GLPKSolverLP(;presolve::Bool=false, method::Symbol=:Simplex)
+        method in [:Simplex, :Exact, :InteriorPoint] ||
+            error("""
+                  Unknown method for GLPK LP solver: $method
+                         Allowed methods:
+                           :Simplex
+                           :Exact
+                           :InteriorPoint""")
+        new(presolve, method)
     end
-    if method == :Simplex || method == :Exact
+end
+
+function model(s::GLPKSolverLP)
+    if s.method == :Simplex || s.method == :Exact
         param = GLPK.SimplexParam()
-        if presolve
+        if s.presolve
             param.presolve = GLPK.ON
         end
-    elseif method == :InteriorPoint
+    elseif s.method == :InteriorPoint
         param = GLPK.InteriorParam()
-        if presolve
+        if s.presolve
             warn("Ignored option: presolve")
         end
     else
-        error("""
-              Unknown method for GLPK LP solver: $method
-                     Allowed methods:
-                       :Simplex
-                       :Exact
-                       :InteriorPoint""")
+        error("This is a bug")
     end
     param.msg_lev = GLPK.MSG_ERR
-    lpm = GLPKSolverLP(GLPK.Prob(), method, param)
+    lpm = GLPKMathProgModelLP(GLPK.Prob(), s.method, param)
     return lpm
 end
 
-function optimize(lpm::GLPKSolverLP)
+function optimize(lpm::GLPKMathProgModelLP)
     if lpm.method == :Simplex
         solve = GLPK.simplex
     elseif lpm.method == :Exact
@@ -81,7 +88,7 @@ function optimize(lpm::GLPKSolverLP)
     return solve(lpm.inner, lpm.param)
 end
 
-function status(lpm::GLPKSolverLP)
+function status(lpm::GLPKMathProgModelLP)
    if lpm.method == :Simplex || lpm.method == :Exact
        get_status = GLPK.get_status
    elseif lpm.method == :InteriorPoint
@@ -107,7 +114,7 @@ function status(lpm::GLPKSolverLP)
    end
 end
 
-function getobjval(lpm::GLPKSolverLP)
+function getobjval(lpm::GLPKMathProgModelLP)
     if lpm.method == :Simplex || lpm.method == :Exact
         get_obj_val = GLPK.get_obj_val
     elseif lpm.method == :InteriorPoint
@@ -118,7 +125,7 @@ function getobjval(lpm::GLPKSolverLP)
     return get_obj_val(lpm.inner)
 end
 
-function getsolution(lpm::GLPKSolverLP)
+function getsolution(lpm::GLPKMathProgModelLP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
@@ -137,7 +144,7 @@ function getsolution(lpm::GLPKSolverLP)
     return x
 end
 
-function getconstrsolution(lpm::GLPKSolverLP)
+function getconstrsolution(lpm::GLPKMathProgModelLP)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
@@ -156,7 +163,7 @@ function getconstrsolution(lpm::GLPKSolverLP)
     return x
 end
 
-function getreducedcosts(lpm::GLPKSolverLP)
+function getreducedcosts(lpm::GLPKMathProgModelLP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
@@ -175,7 +182,7 @@ function getreducedcosts(lpm::GLPKSolverLP)
     return x
 end
 
-function getconstrduals(lpm::GLPKSolverLP)
+function getconstrduals(lpm::GLPKMathProgModelLP)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
