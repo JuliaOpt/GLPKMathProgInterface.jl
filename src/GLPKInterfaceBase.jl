@@ -7,22 +7,22 @@ importall MathProgSolverInterface
 
 export
     GLPKMathProgModel,
-    loadproblem,
+    loadproblem!,
     writeproblem,
     getvarLB,
-    setvarLB,
+    setvarLB!,
     getvarLB,
-    setvarLB,
+    setvarLB!,
     getconstrLB,
-    setconstrLB,
+    setconstrLB!,
     getconstrUB,
-    setconstrUB,
+    setconstrUB!,
     getobj,
-    setobj,
-    addvar,
-    addconstr,
-    updatemodel,
-    setsense,
+    setobj!,
+    addvar!,
+    addconstr!,
+    updatemodel!,
+    setsense!,
     getsense,
     numvar,
     numconstr,
@@ -31,7 +31,7 @@ export
 
 abstract GLPKMathProgModel <: AbstractMathProgSolver
 
-function loadproblem(lpm::GLPKMathProgModel, filename::String)
+function loadproblem!(lpm::GLPKMathProgModel, filename::String)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
        read_mps(lpm.inner, GLPK.MPS_FILE, filename)
     elseif endswith(filename, ".lp") || endswith(filename, ".lp.gz")
@@ -45,7 +45,7 @@ end
 
 nonnull(x) = (x != Nothing && !isempty(x))
 
-function loadproblem(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, obj, rowlb, rowub)
+function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, obj, rowlb, rowub, sense)
     lp = lpm.inner
 
     m, n = size(A)
@@ -111,6 +111,8 @@ function loadproblem(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, ob
     end
 
     GLPK.load_matrix(lp, ia, ja, ar)
+    setsense!(lpm, sense)
+
     return lpm
 end
 
@@ -130,7 +132,7 @@ function getvarLB(lpm::GLPKMathProgModel)
     return lb
 end
 
-function setvarLB(lpm::GLPKMathProgModel, collb)
+function setvarLB!(lpm::GLPKMathProgModel, collb)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     if nonnull(collb) && length(collb) != n
@@ -176,7 +178,7 @@ function getvarUB(lpm::GLPKMathProgModel)
     return ub
 end
 
-function setvarUB(lpm::GLPKMathProgModel, colub)
+function setvarUB!(lpm::GLPKMathProgModel, colub)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     if nonnull(colub) && length(colub) != n
@@ -222,7 +224,7 @@ function getconstrLB(lpm::GLPKMathProgModel)
     return lb
 end
 
-function setconstrLB(lpm::GLPKMathProgModel, rowlb)
+function setconstrLB!(lpm::GLPKMathProgModel, rowlb)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
     if nonnull(rowlb) && length(rowlb) != m
@@ -268,7 +270,7 @@ function getconstrUB(lpm::GLPKMathProgModel)
     return ub
 end
 
-function setconstrUB(lpm::GLPKMathProgModel, rowub)
+function setconstrUB!(lpm::GLPKMathProgModel, rowub)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
     if nonnull(rowub) && length(rowub) != m
@@ -311,7 +313,7 @@ function getobj(lpm::GLPKMathProgModel)
     return obj
 end
 
-function setobj(lpm::GLPKMathProgModel, obj)
+function setobj!(lpm::GLPKMathProgModel, obj)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     if nonnull(obj) && length(obj) != n
@@ -326,7 +328,7 @@ function setobj(lpm::GLPKMathProgModel, obj)
     end
 end
 
-function addvar(lpm::GLPKMathProgModel, rowidx::Vector, rowcoef::Vector, collb::Real, colub::Real, objcoef::Real)
+function addvar!(lpm::GLPKMathProgModel, rowidx::Vector, rowcoef::Vector, collb::Real, colub::Real, objcoef::Real)
     if length(rowidx) != length(rowcoef)
         error("rowidx and rowcoef have different legths")
     end
@@ -352,7 +354,7 @@ function addvar(lpm::GLPKMathProgModel, rowidx::Vector, rowcoef::Vector, collb::
     return
 end
 
-function addconstr(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, rowlb::Real, rowub::Real)
+function addconstr!(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, rowlb::Real, rowub::Real)
     if length(colidx) != length(colcoef)
         error("colidx and colcoef have different legths")
     end
@@ -377,9 +379,9 @@ function addconstr(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, rowl
     return
 end
 
-updatemodel(m::GLPKMathProgModel) = nothing
+updatemodel!(m::GLPKMathProgModel) = nothing
 
-function setsense(lpm::GLPKMathProgModel, sense)
+function setsense!(lpm::GLPKMathProgModel, sense)
     lp = lpm.inner
     if sense == :Min
         GLPK.set_obj_dir(lp, GLPK.MIN)

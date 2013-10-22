@@ -7,23 +7,23 @@ importall ..GLPKInterfaceBase
 export
     GLPKSolverLP,
     model,
-    optimize,
-    loadproblem,
+    optimize!,
+    loadproblem!,
     writeproblem,
     getvarLB,
-    setvarLB,
+    setvarLB!,
     getvarLB,
-    setvarLB,
+    setvarLB!,
     getconstrLB,
-    setconstrLB,
+    setconstrLB!,
     getconstrUB,
-    setconstrUB,
+    setconstrUB!,
     getobj,
-    setobj,
-    addvar,
-    addconstr,
-    updatemodel,
-    setsense,
+    setobj!,
+    addvar!,
+    addconstr!,
+    updatemodel!,
+    setsense!,
     getsense,
     numvar,
     numconstr,
@@ -75,7 +75,7 @@ function model(s::GLPKSolverLP)
     return lpm
 end
 
-function optimize(lpm::GLPKMathProgModelLP)
+function optimize!(lpm::GLPKMathProgModelLP)
     if lpm.method == :Simplex
         solve = GLPK.simplex
     elseif lpm.method == :Exact
