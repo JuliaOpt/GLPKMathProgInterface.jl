@@ -7,27 +7,27 @@ importall ..GLPKInterfaceBase
 export
     GLPKSolverMIP,
     model,
-    optimize,
-    loadproblem,
+    optimize!,
+    loadproblem!,
     writeproblem,
     getvarLB,
-    setvarLB,
+    setvarLB!,
     getvarLB,
-    setvarLB,
+    setvarLB!,
     getconstrLB,
-    setconstrLB,
+    setconstrLB!,
     getconstrUB,
-    setconstrUB,
+    setconstrUB!,
     getobj,
-    setobj,
-    addvar,
-    addconstr,
-    updatemodel,
-    setsense,
+    setobj!,
+    addvar!,
+    addconstr!,
+    updatemodel!,
+    setsense!,
     getsense,
     numvar,
     numconstr,
-    setvartype,
+    setvartype!,
     status,
     getobjval,
     getsolution,
@@ -71,7 +71,7 @@ function model(s::GLPKSolverMIP)
     return lpm
 end
 
-function setsense(lpm::GLPKMathProgModelMIP, sense)
+function setsense!(lpm::GLPKMathProgModelMIP, sense)
     lp = lpm.inner
     if sense == :Min
         GLPK.set_obj_dir(lp, GLPK.MIN)
@@ -84,7 +84,7 @@ function setsense(lpm::GLPKMathProgModelMIP, sense)
     end
 end
 
-function setvartype(lpm::GLPKMathProgModelMIP, vartype)
+function setvartype!(lpm::GLPKMathProgModelMIP, vartype)
     lp = lpm.inner
     ncol = numvar(lpm)
     @assert length(vartype) == ncol
@@ -113,7 +113,7 @@ function getvartype(lpm::GLPKMathProgModelMIP)
     return coltype
 end
 
-function optimize(lpm::GLPKMathProgModelMIP)
+function optimize!(lpm::GLPKMathProgModelMIP)
     if lpm.param.presolve == GLPK.OFF
         ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
         ret_ps != 0 && return ret_ps
