@@ -29,7 +29,7 @@ export
     getrawsolver
 
 
-abstract GLPKMathProgModel <: AbstractMathProgSolver
+abstract GLPKMathProgModel <: AbstractMathProgModel
 
 function loadproblem!(lpm::GLPKMathProgModel, filename::String)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
