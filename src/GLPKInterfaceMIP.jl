@@ -104,7 +104,7 @@ end
 
 function getvartype(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
-    ncol = numvar(m)
+    ncol = numvar(lpm)
     coltype = Array(Char, ncol)
     for i in 1:ncol
         ct = GLPK.get_col_kind(lp, i)
