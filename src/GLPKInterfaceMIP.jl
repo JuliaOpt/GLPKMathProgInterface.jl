@@ -114,11 +114,26 @@ function getvartype(lpm::GLPKMathProgModelMIP)
 end
 
 function optimize!(lpm::GLPKMathProgModelMIP)
-    if lpm.param.presolve == GLPK.OFF
-        ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
-        ret_ps != 0 && return ret_ps
+    vartype = getvartype(lpm)
+    lb = getvarLB(lpm)
+    ub = getvarUB(lpm)
+    old_lb = copy(lb)
+    old_ub = copy(ub)
+    for c in 1:length(vartype)
+        vartype[c] == 'I' && (lb[c] = ceil(lb[c]); ub[c] = floor(ub[c]))
     end
-    GLPK.intopt(lpm.inner, lpm.param)
+    try
+        if lpm.param.presolve == GLPK.OFF
+            ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
+            ret_ps != 0 && return ret_ps
+        end
+        setvarLB!(lpm, lb)
+        setvarUB!(lpm, ub)
+        GLPK.intopt(lpm.inner, lpm.param)
+    finally
+        setvarLB!(lpm, old_lb)
+        setvarUB!(lpm, old_ub)
+    end
 end
 
 function status(lpm::GLPKMathProgModelMIP)
