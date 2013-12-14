@@ -50,10 +50,6 @@ function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, o
 
     m, n = size(A)
 
-    if m == 0 || n == 0
-        error("empty problem matrix A")
-    end
-
     function checksize(x, l, str)
         if nonnull(x) && length(x) != l
             error("size of $str is incompatible with size of A")
@@ -86,14 +82,14 @@ function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, o
         end
     end
 
-    GLPK.add_rows(lp, m)
+    m >0 && GLPK.add_rows(lp, m)
     for r = 1:m
         #println("  r=$r b=$(b[r])")
         l, u, t = getbounds(rowlb, rowub, r)
         GLPK.set_row_bnds(lp, r, t, l, u)
     end
 
-    GLPK.add_cols(lp, n)
+    n > 0 && GLPK.add_cols(lp, n)
     for c = 1:n
         #println("  r=$r b=$(b[r])")
         l, u, t = getbounds(collb, colub, c)
@@ -110,7 +106,7 @@ function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, o
         end
     end
 
-    GLPK.load_matrix(lp, ia, ja, ar)
+    m >0 && n >0 && GLPK.load_matrix(lp, ia, ja, ar)
     setsense!(lpm, sense)
 
     return lpm

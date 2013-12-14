@@ -80,7 +80,7 @@ function setsense!(lpm::GLPKMathProgModelMIP, sense)
         GLPK.set_obj_dir(lp, GLPK.MAX)
         lpm.objbound[1] = Inf
     else
-        error("Unrecognized objective sense $sense")
+        error("unrecognized objective sense: $sense")
     end
 end
 
@@ -94,7 +94,7 @@ function setvartype!(lpm::GLPKMathProgModelMIP, vartype)
         elseif c == 'C'
             return GLPK.CV
         else
-            error("invalid var type $c")
+            error("invalid var type: $c")
         end
     end
     for i in 1:ncol
@@ -154,7 +154,7 @@ function status(lpm::GLPKMathProgModelMIP)
    elseif s == GLPK.UNDEF
        return :Undefined
    else
-       error("Internal library error")
+       error("internal library error")
    end
 end
 
