@@ -6,6 +6,7 @@ importall ..GLPKInterfaceBase
 
 export
     GLPKSolverMIP,
+    GLPKCallbackData,
     model,
     optimize!,
     loadproblem!,
@@ -34,13 +35,43 @@ export
     getconstrsolution,
     getreducedcosts,
     getconstrduals,
-    getrawsolver
+    getrawsolver,
+    setlazycallback!,
+    setcutcallback!,
+    setheuristiccallback!,
+    cbaddlazy!,
+    cbgetmipsolution,
+    cbgetlpsolution,
+    cbgetstate,
+    cbgetobj,
+    cbgetbestbound,
+    cbgetexplorednodes,
+    cbaddcut!,
+    cbaddsolution
 
 type GLPKMathProgModelMIP <: GLPKMathProgModel
     inner::GLPK.Prob
     param::GLPK.IntoptParam
     smplxparam::GLPK.SimplexParam
-    objbound::Vector{Float64}
+    lazycb::Union(Function,Nothing)
+    cutcb::Union(Function,Nothing)
+    heuristiccb::Union(Function,Nothing)
+    objbound::Float64
+    cbdata::MathProgCallbackData
+    function GLPKMathProgModelMIP()
+        lpm = new(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(),
+                  nothing, nothing, nothing, -Inf)
+        lpm.cbdata = GLPKCallbackData(lpm)
+        return lpm
+    end
+end
+
+type GLPKCallbackData <: MathProgCallbackData
+    model::GLPKMathProgModelMIP
+    tree::Ptr{Void}
+    state::Symbol
+    reason::Cint
+    GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1)
 end
 
 type GLPKSolverMIP <: AbstractMathProgSolver
@@ -48,37 +79,199 @@ type GLPKSolverMIP <: AbstractMathProgSolver
     GLPKSolverMIP(;presolve::Bool=false) = new(presolve)
 end
 
+function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
+    cb_data = unsafe_pointer_to_objref(info)
+    lpm = cb_data.model
+    cb_data.tree = tree
+
+    reason = GLPK.ios_reason(tree)
+    cb_data.reason = reason
+    if reason == GLPK.ISELECT
+        #println("reason=SELECT")
+        cb_data.state = :Other
+    elseif reason == GLPK.IPREPRO
+        #println("reason=PREPRO")
+        cb_data.state = :MIPNode
+    elseif reason == GLPK.IROWGEN
+        #println("reason=ROWGEN")
+        cb_data.state = :MIPNode
+        lpm.lazycb != nothing && lpm.lazycb(cb_data)
+    elseif reason == GLPK.IHEUR
+        #println("reason=HEUR")
+        cb_data.state = :MIPNode
+        lpm.heuristiccb != nothing && lpm.heuristiccb(cb_data)
+    elseif reason == GLPK.ICUTGEN
+        #println("reason=CUTGEN")
+        cb_data.state = :MIPNode
+        lpm.cutcb != nothing && lpm.cutcb(cb_data)
+    elseif reason == GLPK.IBRANCH
+        #println("reason=BRANCH")
+        cb_data.state = :MIPNode
+    elseif reason == GLPK.IBINGO
+        #println("reason=BINGO")
+        cb_data.state = :MIPSol
+    else
+        error("internal library error")
+    end
+
+    bn = GLPK.ios_best_node(tree)
+    bn != 0 && (lpm.objbound = GLPK.ios_node_bound(tree, bn))
+
+    return
+end
+
 function model(s::GLPKSolverMIP)
-    lpm = GLPKMathProgModelMIP(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(), [-Inf])
+    lpm = GLPKMathProgModelMIP()
     lpm.param.msg_lev = GLPK.MSG_ERR
     lpm.smplxparam.msg_lev = GLPK.MSG_ERR
     if s.presolve
         lpm.param.presolve = GLPK.ON
     end
 
-    function cb_callback(tree::Ptr{Void}, info::Ptr{Void})
-        bn = GLPK.ios_best_node(tree)
-        if bn == 0
-            return
-        end
-        ret = pointer_to_array(convert(Ptr{Float64}, info), 1, false)
-        ret[1] = GLPK.ios_node_bound(tree, bn)
-        return
-    end
-    lpm.param.cb_func = cfunction(cb_callback, Void, (Ptr{Void}, Ptr{Void}))
-    lpm.param.cb_info = convert(Ptr{Void}, lpm.objbound)
+    lpm.param.cb_func = cfunction(_internal_callback, Void, (Ptr{Void}, Ptr{Void}))
+    lpm.param.cb_info = pointer_from_objref(lpm.cbdata)
 
     return lpm
+end
+
+setlazycallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.lazycb = f)
+setcutcallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.cutcb = f)
+setheuristiccallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.heuristiccb = f)
+
+_check_tree(d::GLPKCallbackData, funcname::String) =
+    (d.tree != C_NULL && d.reason != -1) || error("$funcname can only be called from within a callback")
+
+cbgetstate(d::GLPKCallbackData) = d.state
+
+function cbgetmipsolution(d::GLPKCallbackData, output::Vector)
+    _check_tree(d, "cbgetmipsolution")
+    lp = GLPK.ios_get_prob(d.tree)
+    n = GLPK.get_num_cols(lp)
+    length(output) >= n || error("output vector is too short")
+
+    for c = 1:n
+        #output[c] = GLPK.mip_col_val(lp, c) # XXX
+        output[c] = GLPK.get_col_prim(lp, c)
+    end
+    #print("sol is "); showcompact(output); println()
+    return output
+end
+
+function cbgetmipsolution(d::GLPKCallbackData)
+    _check_tree(d, "cbgetmipsolution")
+    lp = GLPK.ios_get_prob(d.tree)
+    n = GLPK.get_num_cols(lp)
+    output = Vector(Float64, n)
+
+    for c = 1:n
+        #output[c] = GLPK.mip_col_val(lp, c) # XXX
+        output[c] = GLPK.get_col_prim(lp, c)
+    end
+    return output
+end
+
+function cbgetlpsolution(d::GLPKCallbackData, output::Vector)
+    _check_tree(d, "cbgetlpsolution")
+    lp = GLPK.ios_get_prob(d.tree)
+    n = GLPK.get_num_cols(lp)
+    length(output) >= n || error("output vector is too short")
+
+    for c = 1:n
+        output[c] = GLPK.get_col_prim(lp, c)
+    end
+    return output
+end
+
+function cbgetlpsolution(d::GLPKCallbackData)
+    _check_tree(d, "cbgetlpsolution")
+    lp = GLPK.ios_get_prob(d.tree)
+    n = GLPK.get_num_cols(lp)
+    output = Vector(Float64, n)
+
+    for c = 1:n
+        output[c] = GLPK.get_col_prim(lp, c)
+    end
+    return output
+end
+
+function cbgetbestbound(d::GLPKCallbackData)
+    _check_tree(d, "cbbestbound")
+    lpm = d.model
+    return lpm.objbound
+end
+
+function cbgetobj(d::GLPKCallbackData)
+    _check_tree(d, "cbgetobj")
+    lp = GLPK.ios_get_prob(d.tree)
+    return GLPK.mip_obj_val(lp)
+end
+
+function cbgetexplorednodes(d::GLPKCallbackData)
+    _check_tree(d, "cbgetexplorednodes")
+    a, _, t = GLPK.ios_tree_size(d.tree)
+    return t - a
+end
+
+function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Symbol, rhs::Real)
+    println("Adding lazy")
+    (d.tree != C_NULL && d.reason == GLPK.IROWGEN) ||
+        error("cbaddlazy! can only be called from within a lazycallback")
+    length(colidx) == length(colcoef) || error("colidx and colcoef have different legths")
+    if sense == :(==)
+        bt = GLPK.FX
+        rowlb = rhs
+        rowub = rhs
+    elseif sense == :(<=)
+        bt = GLPK.UP
+        rowlb = -Inf
+        rowub = rhs
+    elseif sense == :(>=)
+        bt = GLPK.LO
+        rowlb = rhs
+        rowub = Inf
+    else
+        error("sense must be :(==), :(<=) or :(>=)")
+    end
+    lp = GLPK.ios_get_prob(d.tree)
+    GLPK.add_rows(lp, 1)
+    m = GLPK.get_num_rows(lp)
+    GLPK.set_mat_row(lp, m, colidx, colcoef)
+    GLPK.set_row_bnds(lp, m, bt, rowlb, rowub)
+    return
+end
+
+function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Symbol, rhs::Real)
+    println("Adding cut")
+    (d.tree != C_NULL && d.reason == GLPK.ICUTGEN) ||
+        error("cbaddcut! can only be called from within a cutcallback")
+    if sense == :(<=)
+        bt = GLPK.UP
+    elseif sense == :(>=)
+        bt = GLPK.LO
+    elseif sense == :(==)
+        error("unsupported sense in cut plane :(==)")
+    else
+        error("sense must be :(<=) or :(>=)")
+    end
+    GLPK.ios_add_row(d.tree, "", 101, colidx, colcoef, bt, rhs)
+    return
+end
+
+function cbaddsolution!(d::GLPKCallbackData, x::Vector)
+    println("Adding sol")
+    (d.tree != C_NULL && d.reason == GLPK.IHEUR) ||
+        error("cbaddcut! can only be called from within a heuristiccallback")
+    GLPK.ios_heur_sol(d.tree, x)
 end
 
 function setsense!(lpm::GLPKMathProgModelMIP, sense)
     lp = lpm.inner
     if sense == :Min
         GLPK.set_obj_dir(lp, GLPK.MIN)
-        lpm.objbound[1] = -Inf
+        lpm.objbound = -Inf
     elseif sense == :Max
         GLPK.set_obj_dir(lp, GLPK.MAX)
-        lpm.objbound[1] = Inf
+        lpm.objbound = Inf
     else
         error("unrecognized objective sense: $sense")
     end
@@ -160,7 +353,7 @@ end
 
 getobjval(lpm::GLPKMathProgModelMIP) = GLPK.mip_obj_val(lpm.inner)
 
-getobjbound(lp::GLPKMathProgModelMIP) = lp.objbound[1]
+getobjbound(lpm::GLPKMathProgModelMIP) = lpm.objbound
 
 function getsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
