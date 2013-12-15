@@ -212,25 +212,25 @@ function cbgetexplorednodes(d::GLPKCallbackData)
     return t - a
 end
 
-function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Symbol, rhs::Real)
+function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
     println("Adding lazy")
     (d.tree != C_NULL && d.reason == GLPK.IROWGEN) ||
         error("cbaddlazy! can only be called from within a lazycallback")
     length(colidx) == length(colcoef) || error("colidx and colcoef have different legths")
-    if sense == :(==)
+    if sense == '='
         bt = GLPK.FX
         rowlb = rhs
         rowub = rhs
-    elseif sense == :(<=)
+    elseif sense == '<'
         bt = GLPK.UP
         rowlb = -Inf
         rowub = rhs
-    elseif sense == :(>=)
+    elseif sense == '>'
         bt = GLPK.LO
         rowlb = rhs
         rowub = Inf
     else
-        error("sense must be :(==), :(<=) or :(>=)")
+        error("sense must be '=', '<' or '>'")
     end
     lp = GLPK.ios_get_prob(d.tree)
     GLPK.add_rows(lp, 1)
@@ -240,18 +240,18 @@ function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense:
     return
 end
 
-function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Symbol, rhs::Real)
+function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
     println("Adding cut")
     (d.tree != C_NULL && d.reason == GLPK.ICUTGEN) ||
         error("cbaddcut! can only be called from within a cutcallback")
-    if sense == :(<=)
+    if sense == '<'
         bt = GLPK.UP
-    elseif sense == :(>=)
+    elseif sense == '>'
         bt = GLPK.LO
-    elseif sense == :(==)
-        error("unsupported sense in cut plane :(==)")
+    elseif sense == '='
+        error("unsupported sense in cut plane '='")
     else
-        error("sense must be :(<=) or :(>=)")
+        error("sense must be '<' or '>'")
     end
     GLPK.ios_add_row(d.tree, "", 101, colidx, colcoef, bt, rhs)
     return
