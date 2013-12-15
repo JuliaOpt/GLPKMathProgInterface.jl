@@ -41,6 +41,7 @@ export
     setheuristiccallback!,
     cbaddlazy!,
     cbgetlpsolution,
+    cbgetmipsolution,
     cbgetstate,
     cbgetobj,
     cbgetbestbound,
@@ -165,6 +166,8 @@ function cbgetlpsolution(d::GLPKCallbackData)
     end
     return output
 end
+
+cbgetmipsolution(d::GLPKCallbackData, output=[]) = error("cbgetmipsolution is not supported by GLPK")
 
 function cbgetbestbound(d::GLPKCallbackData)
     _check_tree(d, "cbbestbound")
