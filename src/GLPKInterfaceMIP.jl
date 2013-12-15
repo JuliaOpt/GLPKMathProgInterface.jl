@@ -40,7 +40,6 @@ export
     setcutcallback!,
     setheuristiccallback!,
     cbaddlazy!,
-    cbgetmipsolution,
     cbgetlpsolution,
     cbgetstate,
     cbgetobj,
@@ -142,33 +141,6 @@ _check_tree(d::GLPKCallbackData, funcname::String) =
     (d.tree != C_NULL && d.reason != -1) || error("$funcname can only be called from within a callback")
 
 cbgetstate(d::GLPKCallbackData) = d.state
-
-function cbgetmipsolution(d::GLPKCallbackData, output::Vector)
-    _check_tree(d, "cbgetmipsolution")
-    lp = GLPK.ios_get_prob(d.tree)
-    n = GLPK.get_num_cols(lp)
-    length(output) >= n || error("output vector is too short")
-
-    for c = 1:n
-        #output[c] = GLPK.mip_col_val(lp, c) # XXX
-        output[c] = GLPK.get_col_prim(lp, c)
-    end
-    #print("sol is "); showcompact(output); println()
-    return output
-end
-
-function cbgetmipsolution(d::GLPKCallbackData)
-    _check_tree(d, "cbgetmipsolution")
-    lp = GLPK.ios_get_prob(d.tree)
-    n = GLPK.get_num_cols(lp)
-    output = Vector(Float64, n)
-
-    for c = 1:n
-        #output[c] = GLPK.mip_col_val(lp, c) # XXX
-        output[c] = GLPK.get_col_prim(lp, c)
-    end
-    return output
-end
 
 function cbgetlpsolution(d::GLPKCallbackData, output::Vector)
     _check_tree(d, "cbgetlpsolution")
