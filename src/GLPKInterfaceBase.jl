@@ -43,7 +43,7 @@ function loadproblem!(lpm::GLPKMathProgModel, filename::String)
     end
 end   
 
-nonnull(x) = (x != Nothing && !isempty(x))
+nonnull(x) = (x != nothing && !isempty(x))
 
 function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, obj, rowlb, rowub, sense)
     lp = lpm.inner
@@ -82,7 +82,7 @@ function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, o
         end
     end
 
-    m >0 && GLPK.add_rows(lp, m)
+    m > 0 && GLPK.add_rows(lp, m)
     for r = 1:m
         #println("  r=$r b=$(b[r])")
         l, u, t = getbounds(rowlb, rowub, r)
@@ -106,7 +106,7 @@ function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, o
         end
     end
 
-    m >0 && n >0 && GLPK.load_matrix(lp, ia, ja, ar)
+    m > 0 && n > 0 && GLPK.load_matrix(lp, ia, ja, ar)
     setsense!(lpm, sense)
 
     return lpm
