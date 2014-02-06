@@ -4,6 +4,8 @@ GLPKMathProgInterface.jl
 Interface between the [GLPK.jl] wrapper and [MathProgBase.jl].
 With this package, you can use the GLPK solver in MathProgBase.jl
 
+Testing status: [![Build Status](https://api.travis-ci.org/JuliaOpt/GLPKMathProgInterface.jl.png)](https://travis-ci.org/JuliaOpt/GLPKMathProgInterface.jl)
+
 The linear programming solver accepts the following optional
 keywords:
 
