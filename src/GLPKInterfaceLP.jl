@@ -33,7 +33,9 @@ export
     getconstrsolution,
     getreducedcosts,
     getconstrduals,
-    getrawsolver
+    getrawsolver,
+    getinfeasibilityray,
+    getunboundedray
 
 type GLPKMathProgModelLP <: GLPKMathProgModel
     inner::GLPK.Prob
@@ -199,6 +201,144 @@ function getconstrduals(lpm::GLPKMathProgModelLP)
         x[r] = get_row_dual(lp, r)
     end
     return x
+end
+
+# The functions getinfeasibilityray and getunboundedray are adapted from code
+# taken from the LEMON C++ optimization library. This is the copyright notice:
+#
+### Copyright (C) 2003-2010
+### Egervary Jeno Kombinatorikus Optimalizalasi Kutatocsoport
+### (Egervary Research Group on Combinatorial Optimization, EGRES).
+###
+### Permission to use, modify and distribute this software is granted
+### provided that this copyright notice appears in all copies. For
+### precise terms see the accompanying LICENSE file.
+###
+### This software is provided "AS IS" with no warranty of any kind,
+### express or implied, and with no claim as to its suitability for any
+### purpose.
+
+function getinfeasibilityray(lpm::GLPKMathProgModelLP)
+    lp = lpm.inner
+
+    if lpm.method == :Simplex || lpm.method == :Exact
+    elseif lpm.method == :InteriorPoint
+        error("getinfeasibilityray is not available when using the InteriorPoint method")
+    else
+        error("bug")
+    end
+
+    m = GLPK.get_num_rows(lp)
+
+    ray = zeros(m)
+
+    ur = GLPK.get_unbnd_ray(lp)
+    if ur != 0
+        if ur <= m
+            k = ur
+            get_stat = GLPK.get_row_stat
+            get_bind = GLPK.get_row_bind
+            get_prim = GLPK.get_row_prim
+            get_ub = GLPK.get_row_ub
+        else
+            k = ur - m
+            get_stat = GLPK.get_col_stat
+            get_bind = GLPK.get_col_bind
+            get_prim = GLPK.get_col_prim
+            get_ub = GLPK.get_col_ub
+        end
+
+        get_stat(lp, k) == GLPK.BS || error("unbounded ray is primal (use getunboundedray)")
+
+        ray[get_bind(lp, k)] = (get_prim(lp, k) > get_ub(lp, k)) ? -1 : 1
+
+        GLPK.btran(lp, ray)
+    else
+        eps = 1e-7
+        for i = 1:m
+            idx = GLPK.get_bhead(lp, i)
+            if idx <= m
+                k = idx
+                get_prim = GLPK.get_row_prim
+                get_ub = GLPK.get_row_ub
+                get_lb = GLPK.get_row_lb
+            else
+                k = idx - m
+                get_prim = GLPK.get_col_prim
+                get_ub = GLPK.get_col_ub
+                get_lb = GLPK.get_col_lb
+            end
+
+            res = get_prim(lp, k)
+            if res > get_ub(lp, k) + eps
+                ray[i] = -1
+            elseif res < get_lb(lp, k) - eps
+                ray[i] = 1
+            else
+                continue # ray[i] == 0
+            end
+
+            if idx <= m
+                ray[i] *= GLPK.get_rii(lp, k)
+            else
+                ray[i] /= GLPK.get_sjj(lp, k)
+            end
+        end
+
+        GLPK.btran(lp, ray)
+
+        for i = 1:m
+            ray[i] /= GLPK.get_rii(lp, i)
+        end
+    end
+
+    return ray
+end
+
+function getunboundedray(lpm::GLPKMathProgModelLP)
+    lp = lpm.inner
+
+    if lpm.method == :Simplex || lpm.method == :Exact
+    elseif lpm.method == :InteriorPoint
+        error("getunboundedray is not available when using the InteriorPoint method")
+    else
+        error("bug")
+    end
+
+    m = GLPK.get_num_rows(lp)
+    n = GLPK.get_num_cols(lp)
+
+    ray = zeros(n)
+
+    ur = GLPK.get_unbnd_ray(lp)
+    if ur != 0
+        if ur <= m
+            k = ur
+            get_stat = GLPK.get_row_stat
+            get_dual = GLPK.get_row_dual
+        else
+            k = ur - m
+            get_stat = GLPK.get_col_stat
+            get_dual = GLPK.get_col_dual
+            ray[k] = 1
+        end
+
+        get_stat(lp, k) != GLPK.BS || error("unbounded ray is dual (use getinfeasibilityray)")
+
+        for (ri, rv) in zip(GLPK.eval_tab_col(lp, ur)...)
+            ri > m && (ray[ri - m] = rv)
+        end
+
+        if (GLPK.get_obj_dir(lp) == GLPK.MAX) $ (get_dual(lp, k) > 0)
+            scale!(ray, -1.0)
+        end
+    else
+        for i = 1:n
+            ray[i] = GLPK.get_col_prim(lp, i)
+        end
+    end
+
+    return ray
 end
 
 end
