@@ -71,7 +71,8 @@ type GLPKCallbackData <: MathProgCallbackData
     tree::Ptr{Void}
     state::Symbol
     reason::Cint
-    GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1)
+    sol::Vector{Float64}
+    GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1, [0.])
 end
 
 type GLPKSolverMIP <: AbstractMathProgSolver
@@ -99,6 +100,8 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     elseif reason == GLPK.IHEUR
         #println("reason=HEUR")
         cb_data.state = :MIPNode
+        cb_data.sol = getsolution(lpm)[:]  # GLPK doesn't auto-complete partial solutions
+                                           # so we will initialize to the current solution.
         lpm.heuristiccb != nothing && lpm.heuristiccb(cb_data)
     elseif reason == GLPK.ICUTGEN
         #println("reason=CUTGEN")
@@ -232,11 +235,15 @@ function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::
     return
 end
 
-function cbaddsolution!(d::GLPKCallbackData, x::Vector)
+function cbaddsolution!(d::GLPKCallbackData)
     println("Adding sol")
     (d.tree != C_NULL && d.reason == GLPK.IHEUR) ||
         error("cbaddcut! can only be called from within a heuristiccallback")
-    GLPK.ios_heur_sol(d.tree, x)
+    GLPK.ios_heur_sol(d.tree, d.sol)
+end
+
+function cbsetsolutionvalue!(d::GLPKCallbackData,varidx,value)
+    d.sol[varidx] = value
 end
 
 function setsense!(lpm::GLPKMathProgModelMIP, sense)
