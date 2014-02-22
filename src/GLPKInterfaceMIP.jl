@@ -234,7 +234,7 @@ function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::
 end
 
 function _initsolution!(d::GLPKCallbackData)
-    isempty(d) || return
+    isempty(d.sol) || return
     lp = GLPK.ios_get_prob(d.tree)
     n = GLPK.get_num_cols(lp)
     resize!(d.sol, n)
@@ -258,7 +258,7 @@ function cbaddsolution!(d::GLPKCallbackData)
         error("cbaddsolution! can only be called from within a heuristiccallback")
     _initsolution!(d)
     _fillsolution!(d)
-    GLPK.ios_heur_sol(d.tree, x)
+    GLPK.ios_heur_sol(d.tree, d.sol)
     fill!(d.sol, NaN)
 end
 
