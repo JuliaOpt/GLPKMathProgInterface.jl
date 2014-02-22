@@ -71,7 +71,8 @@ type GLPKCallbackData <: MathProgCallbackData
     tree::Ptr{Void}
     state::Symbol
     reason::Cint
-    GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1)
+    sol::Vector{Float64}
+    GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1, Float64[])
 end
 
 type GLPKSolverMIP <: AbstractMathProgSolver
@@ -188,7 +189,7 @@ function cbgetexplorednodes(d::GLPKCallbackData)
 end
 
 function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
-    println("Adding lazy")
+    #println("Adding lazy")
     (d.tree != C_NULL && d.reason == GLPK.IROWGEN) ||
         error("cbaddlazy! can only be called from within a lazycallback")
     length(colidx) == length(colcoef) || error("colidx and colcoef have different legths")
@@ -216,7 +217,7 @@ function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense:
 end
 
 function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
-    println("Adding cut")
+    #println("Adding cut")
     (d.tree != C_NULL && d.reason == GLPK.ICUTGEN) ||
         error("cbaddcut! can only be called from within a cutcallback")
     if sense == '<'
@@ -232,11 +233,39 @@ function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::
     return
 end
 
-function cbaddsolution!(d::GLPKCallbackData, x::Vector)
-    println("Adding sol")
+function _initsolution!(d::GLPKCallbackData)
+    isempty(d.sol) || return
+    lp = GLPK.ios_get_prob(d.tree)
+    n = GLPK.get_num_cols(lp)
+    resize!(d.sol, n)
+    fill!(d.sol, NaN)
+    return
+end
+
+function _fillsolution!(d::GLPKCallbackData)
+    lp = GLPK.ios_get_prob(d.tree)
+    n = GLPK.get_num_cols(lp)
+    sol = d.sol
+    for c = 1:n
+        isnan(sol[c]) || continue
+        sol[c] = GLPK.mip_col_val(lp, c)
+    end
+end
+
+function cbaddsolution!(d::GLPKCallbackData)
+    #println("Adding sol")
     (d.tree != C_NULL && d.reason == GLPK.IHEUR) ||
-        error("cbaddcut! can only be called from within a heuristiccallback")
-    GLPK.ios_heur_sol(d.tree, x)
+        error("cbaddsolution! can only be called from within a heuristiccallback")
+    _initsolution!(d)
+    _fillsolution!(d)
+    GLPK.ios_heur_sol(d.tree, d.sol)
+    fill!(d.sol, NaN)
+end
+
+function cbsetsolutionvalue!(d::GLPKCallbackData, idx::Integer, val::Real)
+    _check_tree(d, "cbsetsolutionvalue!")
+    _initsolution!(d)
+    d.sol[idx] = val
 end
 
 function setsense!(lpm::GLPKMathProgModelMIP, sense)
