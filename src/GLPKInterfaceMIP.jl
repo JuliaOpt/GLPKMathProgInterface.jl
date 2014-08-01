@@ -72,7 +72,8 @@ type GLPKCallbackData <: MathProgCallbackData
     state::Symbol
     reason::Cint
     sol::Vector{Float64}
-    GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1, Float64[])
+    vartype::Vector{Char}
+    GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1, Float64[], Char[])
 end
 
 type GLPKSolverMIP <: AbstractMathProgSolver
@@ -81,7 +82,7 @@ type GLPKSolverMIP <: AbstractMathProgSolver
 end
 
 function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
-    cb_data = unsafe_pointer_to_objref(info)
+    cb_data = unsafe_pointer_to_objref(info)::GLPKCallbackData
     lpm = cb_data.model
     cb_data.tree = tree
 
@@ -96,6 +97,25 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     elseif reason == GLPK.IROWGEN
         #println("reason=ROWGEN")
         cb_data.state = :MIPNode
+        # if the current solution is actually integer feasible, then
+        # return MIPSol status.
+        _initsolution!(cb_data)
+        cbgetlpsolution(cb_data, cb_data.sol)
+        # tol_int = 1e-5 by default
+        # TODO: query from GLPK
+        all_integer = true
+        for i in 1:length(cb_data.sol)
+            cb_data.vartype[i] == 'I' || continue
+            if abs(cb_data.sol[i]-round(cb_data.sol[i])) > 1e-5
+                all_integer = false
+                break
+            end
+        end
+        if all_integer
+            cb_data.state = :MIPSol
+        end
+        fill!(cb_data.sol, NaN)
+
         lpm.lazycb != nothing && lpm.lazycb(cb_data)
     elseif reason == GLPK.IHEUR
         #println("reason=HEUR")
@@ -168,7 +188,14 @@ function cbgetlpsolution(d::GLPKCallbackData)
     return output
 end
 
-cbgetmipsolution(d::GLPKCallbackData, output=[]) = error("cbgetmipsolution is not supported by GLPK")
+
+function cbgetmipsolution(d::GLPKCallbackData, output::Vector)
+    # assuming we're in the lazy callback where
+    # the LP solution is actually integral.
+    # If we add an informational callback for GLPK.IBINGO,
+    # then this will need to be modified.
+    return cbgetlpsolution(d, output)
+end
 
 function cbgetbestbound(d::GLPKCallbackData)
     _check_tree(d, "cbbestbound")
@@ -319,6 +346,7 @@ function optimize!(lpm::GLPKMathProgModelMIP)
     for c in 1:length(vartype)
         vartype[c] == 'I' && (lb[c] = ceil(lb[c]); ub[c] = floor(ub[c]))
     end
+    lpm.cbdata.vartype = vartype
     try
         if lpm.param.presolve == GLPK.OFF
             ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
