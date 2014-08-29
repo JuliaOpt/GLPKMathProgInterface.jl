@@ -1,7 +1,7 @@
 module GLPKInterfaceLP
 
 import GLPK
-importall MathProgSolverInterface
+importall MathProgBase.SolverInterface
 importall ..GLPKInterfaceBase
 
 export
