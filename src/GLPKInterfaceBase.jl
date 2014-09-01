@@ -2,8 +2,7 @@ module GLPKInterfaceBase
 
 import GLPK
 
-require(joinpath(Pkg.dir("MathProgBase"),"src","MathProgSolverInterface.jl"))
-importall MathProgSolverInterface
+importall MathProgBase.SolverInterface
 
 export
     GLPKMathProgModel,

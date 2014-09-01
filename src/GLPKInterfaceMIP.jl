@@ -1,7 +1,7 @@
 module GLPKInterfaceMIP
 
 import GLPK
-importall MathProgSolverInterface
+importall MathProgBase.SolverInterface
 importall ..GLPKInterfaceBase
 
 export
@@ -72,7 +72,7 @@ type GLPKCallbackData <: MathProgCallbackData
     state::Symbol
     reason::Cint
     sol::Vector{Float64}
-    vartype::Vector{Char}
+    vartype::Vector{Symbol}
     GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1, Float64[], Char[])
 end
 
@@ -308,15 +308,17 @@ function setsense!(lpm::GLPKMathProgModelMIP, sense)
     end
 end
 
-function setvartype!(lpm::GLPKMathProgModelMIP, vartype)
+function setvartype!(lpm::GLPKMathProgModelMIP, vartype::Vector{Symbol})
     lp = lpm.inner
     ncol = numvar(lpm)
     @assert length(vartype) == ncol
     coltype = map(vartype) do c
-        if c == 'I'
+        if c == :Int
             return GLPK.IV
-        elseif c == 'C'
+        elseif c == :Cont
             return GLPK.CV
+        elseif c == :Bin
+            return GLPK.BV
         else
             error("invalid var type: $c")
         end
@@ -326,13 +328,19 @@ function setvartype!(lpm::GLPKMathProgModelMIP, vartype)
     end
 end
 
+const vartype_map = [
+    GLPK.CV => :Cont,
+    GLPK.IV => :Int,
+    GLPK.BV => :Bin
+]
+
 function getvartype(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     ncol = numvar(lpm)
-    coltype = Array(Char, ncol)
+    coltype = Array(Symbol, ncol)
     for i in 1:ncol
         ct = GLPK.get_col_kind(lp, i)
-        coltype[i] = (ct == GLPK.CV ? 'C' : 'I')
+        coltype[i] = vartype_map[ct]
     end
     return coltype
 end
@@ -344,7 +352,7 @@ function optimize!(lpm::GLPKMathProgModelMIP)
     old_lb = copy(lb)
     old_ub = copy(ub)
     for c in 1:length(vartype)
-        vartype[c] == 'I' && (lb[c] = ceil(lb[c]); ub[c] = floor(ub[c]))
+        vartype[c] in [:Int,:Bin] && (lb[c] = ceil(lb[c]); ub[c] = floor(ub[c]))
     end
     lpm.cbdata.vartype = vartype
     try
