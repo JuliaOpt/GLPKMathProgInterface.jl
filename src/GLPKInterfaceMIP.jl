@@ -58,10 +58,12 @@ type GLPKMathProgModelMIP <: GLPKMathProgModel
     heuristiccb::Union(Function,Nothing)
     objbound::Float64
     cbdata::MathProgCallbackData
+    binaries::Vector{Int}
     function GLPKMathProgModelMIP()
         lpm = new(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(),
                   nothing, nothing, nothing, -Inf)
         lpm.cbdata = GLPKCallbackData(lpm)
+        lpm.binaries = Int[]
         return lpm
     end
 end
@@ -310,21 +312,21 @@ end
 
 function setvartype!(lpm::GLPKMathProgModelMIP, vartype::Vector{Symbol})
     lp = lpm.inner
+    lpm.binaries = Int[]
     ncol = numvar(lpm)
     @assert length(vartype) == ncol
-    coltype = map(vartype) do c
-        if c == :Int
-            return GLPK.IV
-        elseif c == :Cont
-            return GLPK.CV
-        elseif c == :Bin
-            return GLPK.BV
-        else
-            error("invalid var type: $c")
-        end
-    end
     for i in 1:ncol
-        GLPK.set_col_kind(lp, i, coltype[i])
+        if vartype[i] == :Int
+            coltype = GLPK.IV
+        elseif vartype[i] == :Cont
+            coltype = GLPK.CV
+        elseif vartype[i] == :Bin
+            push!(lpm.binaries, i)
+            coltype = GLPK.IV
+        else
+            error("invalid variable type: $(vartype[i])")
+        end
+        GLPK.set_col_kind(lp, i, coltype)
     end
 end
 
@@ -341,6 +343,11 @@ function getvartype(lpm::GLPKMathProgModelMIP)
     for i in 1:ncol
         ct = GLPK.get_col_kind(lp, i)
         coltype[i] = vartype_map[ct]
+        if i in lpm.binaries
+            coltype[i] = :Bin
+        elseif coltype[i] == :Bin # GLPK said it was binary, but we didn't tell it
+            coltype[i] = :Int
+        end
     end
     return coltype
 end
@@ -353,6 +360,7 @@ function optimize!(lpm::GLPKMathProgModelMIP)
     old_ub = copy(ub)
     for c in 1:length(vartype)
         vartype[c] in [:Int,:Bin] && (lb[c] = ceil(lb[c]); ub[c] = floor(ub[c]))
+        vartype[c] == :Bin && (lb[c] = max(lb[c],0.0); ub[c] = min(ub[c],1.0))
     end
     lpm.cbdata.vartype = vartype
     try
