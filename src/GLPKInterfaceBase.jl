@@ -16,6 +16,7 @@ export
     setconstrLB!,
     getconstrUB,
     setconstrUB!,
+    getconstrmatrix,
     getobj,
     setobj!,
     addvar!,
@@ -296,6 +297,32 @@ function setconstrUB!(lpm::GLPKMathProgModel, rowub)
         end
     end
 end
+
+function getconstrmatrix(lpm::GLPKMathProgModel)
+    lp = lpm.inner
+    m = GLPK.get_num_rows(lp)
+    n = GLPK.get_num_cols(lp)
+    colwise = [GLPK.get_mat_col(lp,i) for i in 1:n]
+    nnz = 0
+    for i in 1:n
+        nnz += length(colwise[1])
+    end
+    colptr = Array(Int,n+1)
+    rowval = Array(Int,nnz)
+    nzval = Array(Int,nnz)
+    cur_nnz = 1
+    for i in 1:n
+        colptr[i] = cur_nnz
+        ind,vals = colwise[i]
+        p = sortperm(ind) # indices must be sorted
+        rowval[cur_nnz:(cur_nnz+length(ind)-1)] = ind[p]
+        nzval[cur_nnz:(cur_nnz+length(ind)-1)] = vals[p]
+        cur_nnz += length(ind)
+    end
+    colptr[n+1] = cur_nnz
+    return SparseMatrixCSC(m,n,colptr,rowval,nzval)
+end
+
 
 function getobj(lpm::GLPKMathProgModel)
     lp = lpm.inner
