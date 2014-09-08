@@ -287,6 +287,25 @@ function cbaddsolution!(d::GLPKCallbackData)
         error("cbaddsolution! can only be called from within a heuristiccallback")
     _initsolution!(d)
     _fillsolution!(d)
+    # test feasibility of solution, would be better if GLPK supported this
+    l = getvarLB(d.model)
+    u = getvarUB(d.model)
+    for i in 1:length(l)
+        if d.sol[i] < l[i] - 1e-6 || d.sol[i] > u[i] + 1e-6
+            warn("Ignoring infeasible solution from heuristic callback")
+            return
+        end
+    end
+    A = getconstrmatrix(d.model)
+    lb = getconstrLB(d.model)
+    ub = getconstrUB(d.model)
+    y = A*d.sol
+    for i in 1:length(lb)
+        if y[i] < lb[i] - 1e-6 || y[i] > ub[i] + 1e-6
+            warn("Ignoring infeasible solution from heuristic callback")
+            return
+        end
+    end
     GLPK.ios_heur_sol(d.tree, d.sol)
     fill!(d.sol, NaN)
 end
