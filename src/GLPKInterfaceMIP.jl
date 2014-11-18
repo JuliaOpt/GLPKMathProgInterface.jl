@@ -383,12 +383,12 @@ function optimize!(lpm::GLPKMathProgModelMIP)
     end
     lpm.cbdata.vartype = vartype
     try
+        setvarLB!(lpm, lb)
+        setvarUB!(lpm, ub)
         if lpm.param.presolve == GLPK.OFF
             ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
             ret_ps != 0 && return ret_ps
         end
-        setvarLB!(lpm, lb)
-        setvarUB!(lpm, ub)
         GLPK.intopt(lpm.inner, lpm.param)
     finally
         setvarLB!(lpm, old_lb)
