@@ -397,25 +397,25 @@ function optimize!(lpm::GLPKMathProgModelMIP)
 end
 
 function status(lpm::GLPKMathProgModelMIP)
-   s = GLPK.mip_status(lpm.inner)
-   if s == GLPK.UNDEF && lpm.param.presolve == GLPK.OFF
-       s = GLPK.get_status(lpm.inner)
-   end
-   if s == GLPK.OPT
-       return :Optimal
-   elseif s == GLPK.INFEAS
-       return :Infeasible
-   elseif s == GLPK.UNBND
-       return :Unbounded
-   elseif s == GLPK.FEAS
-       return :Feasible
-   elseif s == GLPK.NOFEAS
-       return :Infeasible
-   elseif s == GLPK.UNDEF
-       return :Undefined
-   else
-       error("internal library error")
-   end
+    s = GLPK.mip_status(lpm.inner)
+    if s == GLPK.UNDEF && lpm.param.presolve == GLPK.OFF
+        s = GLPK.get_status(lpm.inner)
+    end
+    if s == GLPK.OPT
+        return :Optimal
+    elseif s == GLPK.INFEAS
+        return :Infeasible
+    elseif s == GLPK.UNBND
+        return :Unbounded
+    elseif s == GLPK.FEAS
+        return :Feasible
+    elseif s == GLPK.NOFEAS
+        return :Infeasible
+    elseif s == GLPK.UNDEF
+        return :Undefined
+    else
+        error("internal library error")
+    end
 end
 
 getobjval(lpm::GLPKMathProgModelMIP) = GLPK.mip_obj_val(lpm.inner)

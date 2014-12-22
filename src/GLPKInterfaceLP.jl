@@ -91,29 +91,29 @@ function optimize!(lpm::GLPKMathProgModelLP)
 end
 
 function status(lpm::GLPKMathProgModelLP)
-   if lpm.method == :Simplex || lpm.method == :Exact
-       get_status = GLPK.get_status
-   elseif lpm.method == :InteriorPoint
-       get_status = GLPK.ipt_status
-   else
-       error("bug")
-   end
-   s = get_status(lpm.inner)
-   if s == GLPK.OPT
-       return :Optimal
-   elseif s == GLPK.INFEAS
-       return :Infeasible
-   elseif s == GLPK.UNBND
-       return :Unbounded
-   elseif s == GLPK.FEAS
-       return :Feasible
-   elseif s == GLPK.NOFEAS
-       return :Infeasible
-   elseif s == GLPK.UNDEF
-       return :Undefined
-   else
-       error("Internal library error")
-   end
+    if lpm.method == :Simplex || lpm.method == :Exact
+        get_status = GLPK.get_status
+    elseif lpm.method == :InteriorPoint
+        get_status = GLPK.ipt_status
+    else
+        error("bug")
+    end
+    s = get_status(lpm.inner)
+    if s == GLPK.OPT
+        return :Optimal
+    elseif s == GLPK.INFEAS
+        return :Infeasible
+    elseif s == GLPK.UNBND
+        return :Unbounded
+    elseif s == GLPK.FEAS
+        return :Feasible
+    elseif s == GLPK.NOFEAS
+        return :Infeasible
+    elseif s == GLPK.UNDEF
+        return :Undefined
+    else
+        error("Internal library error")
+    end
 end
 
 function getobjval(lpm::GLPKMathProgModelLP)
