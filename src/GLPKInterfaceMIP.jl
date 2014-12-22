@@ -80,7 +80,8 @@ end
 
 type GLPKSolverMIP <: AbstractMathProgSolver
     presolve::Bool
-    GLPKSolverMIP(;presolve::Bool=false) = new(presolve)
+    opts
+    GLPKSolverMIP(;presolve::Bool=false, opts...) = new(presolve, opts)
 end
 
 function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
@@ -153,6 +154,27 @@ function model(s::GLPKSolverMIP)
 
     lpm.param.cb_func = cfunction(_internal_callback, Void, (Ptr{Void}, Ptr{Void}))
     lpm.param.cb_info = pointer_from_objref(lpm.cbdata)
+
+    for (k,v) in s.opts
+        if k in [:cb_func, :cb_info]
+            warn("ignored option: $(string(k)); use the MathProgBase callback interface instead")
+            continue
+        end
+        i = findfirst(x->x==k, typeof(lpm.param).names)
+        s = findfirst(x->x==k, typeof(lpm.smplxparam).names)
+        if !(i > 0 || s > 0)
+            warn("Ignored option: $(string(k))")
+            continue
+        end
+        if i > 0
+            t = typeof(lpm.param).types[i]
+            setfield!(lpm.param, i, convert(t, v))
+        end
+        if s > 0
+            t = typeof(lpm.smplxparam).types[s]
+            setfield!(lpm.smplxparam, s, convert(t, v))
+        end
+    end
 
     return lpm
 end

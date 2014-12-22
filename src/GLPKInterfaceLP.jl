@@ -46,7 +46,8 @@ end
 type GLPKSolverLP <: AbstractMathProgSolver
     presolve::Bool
     method::Symbol
-    function GLPKSolverLP(;presolve::Bool=false, method::Symbol=:Simplex)
+    opts
+    function GLPKSolverLP(;presolve::Bool=false, method::Symbol=:Simplex, opts...)
         method in [:Simplex, :Exact, :InteriorPoint] ||
             error("""
                   Unknown method for GLPK LP solver: $method
@@ -54,7 +55,7 @@ type GLPKSolverLP <: AbstractMathProgSolver
                            :Simplex
                            :Exact
                            :InteriorPoint""")
-        new(presolve, method)
+        new(presolve, method, opts)
     end
 end
 
@@ -73,6 +74,15 @@ function model(s::GLPKSolverLP)
         error("This is a bug")
     end
     param.msg_lev = GLPK.MSG_ERR
+    for (k,v) in s.opts
+        i = findfirst(x->x==k, typeof(param).names)
+        if i > 0
+            t = typeof(param).types[i]
+            setfield!(param, i, convert(t, v))
+        else
+            warn("Ignored option: $(string(k))")
+        end
+    end
     lpm = GLPKMathProgModelLP(GLPK.Prob(), s.method, param)
     return lpm
 end
