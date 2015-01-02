@@ -108,7 +108,8 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
         # TODO: query from GLPK
         all_integer = true
         for i in 1:length(cb_data.sol)
-            cb_data.vartype[i] == 'I' || continue
+            v::Symbol = cb_data.vartype[i]
+            (v == :Int || v == :Bin) || continue
             if abs(cb_data.sol[i]-round(cb_data.sol[i])) > 1e-5
                 all_integer = false
                 break
