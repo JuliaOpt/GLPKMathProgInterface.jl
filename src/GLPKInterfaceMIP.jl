@@ -56,12 +56,13 @@ type GLPKMathProgModelMIP <: GLPKMathProgModel
     lazycb::Union(Function,Nothing)
     cutcb::Union(Function,Nothing)
     heuristiccb::Union(Function,Nothing)
+    infocb::Union(Function,Nothing)
     objbound::Float64
     cbdata::MathProgCallbackData
     binaries::Vector{Int}
     function GLPKMathProgModelMIP()
         lpm = new(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(),
-                  nothing, nothing, nothing, -Inf)
+                  nothing, nothing, nothing, nothing, -Inf)
         lpm.cbdata = GLPKCallbackData(lpm)
         lpm.binaries = Int[]
         return lpm
@@ -84,6 +85,8 @@ type GLPKSolverMIP <: AbstractMathProgSolver
     GLPKSolverMIP(;presolve::Bool=false, opts...) = new(presolve, opts)
 end
 
+throw_if_abort(stat::Symbol) = (stat == :Exit && throw("Callback aborted optimization early"))
+
 function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     cb_data = unsafe_pointer_to_objref(info)::GLPKCallbackData
     lpm = cb_data.model
@@ -91,6 +94,15 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
 
     reason = GLPK.ios_reason(tree)
     cb_data.reason = reason
+
+    # Doesn't seem like there's a natural "reason" to put this with,
+    # so let's just call it everywhere for now
+    if lpm.infocb != nothing
+        cb_data.state = :MIPInfo
+        stat = lpm.infocb(cb_data)
+        throw_if_abort(stat)
+    end
+
     if reason == GLPK.ISELECT
         #println("reason=SELECT")
         cb_data.state = :Other
@@ -120,15 +132,24 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
         end
         fill!(cb_data.sol, NaN)
 
-        lpm.lazycb != nothing && lpm.lazycb(cb_data)
+        if lpm.lazycb != nothing
+            stat = lpm.lazycb(cb_data)
+            throw_if_abort(stat)
+        end
     elseif reason == GLPK.IHEUR
         #println("reason=HEUR")
         cb_data.state = :MIPNode
-        lpm.heuristiccb != nothing && lpm.heuristiccb(cb_data)
+        if lpm.heuristiccb != nothing
+            stat = lpm.heuristiccb(cb_data)
+            throw_if_abort(stat)
+        end
     elseif reason == GLPK.ICUTGEN
         #println("reason=CUTGEN")
         cb_data.state = :MIPNode
-        lpm.cutcb != nothing && lpm.cutcb(cb_data)
+        if lpm.cutcb != nothing
+            stat = lpm.cutcb(cb_data)
+            throw_if_abort(stat)
+        end
     elseif reason == GLPK.IBRANCH
         #println("reason=BRANCH")
         cb_data.state = :MIPNode
@@ -183,6 +204,7 @@ end
 setlazycallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.lazycb = f)
 setcutcallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.cutcb = f)
 setheuristiccallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.heuristiccb = f)
+setinfocallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.infocb = f)
 
 _check_tree(d::GLPKCallbackData, funcname::String) =
     (d.tree != C_NULL && d.reason != -1) || error("$funcname can only be called from within a callback")
