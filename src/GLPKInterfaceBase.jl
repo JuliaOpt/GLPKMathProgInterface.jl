@@ -33,11 +33,11 @@ abstract GLPKMathProgModel <: AbstractMathProgModel
 
 function loadproblem!(lpm::GLPKMathProgModel, filename::String)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
-       read_mps(lpm.inner, GLPK.MPS_FILE, filename)
+       GLPK.read_mps(lpm.inner, GLPK.MPS_FILE, filename)
     elseif endswith(filename, ".lp") || endswith(filename, ".lp.gz")
-       read_lp(lpm.inner, filename)
+       GLPK.read_lp(lpm.inner, filename)
     elseif endswith(filename, ".prob") || endswith(filename, ".prob.gz")
-       read_prob(lpm.inner, filename)
+       GLPK.read_prob(lpm.inner, filename)
     else
        error("unrecognized input format extension in $filename")
     end
@@ -305,11 +305,11 @@ function getconstrmatrix(lpm::GLPKMathProgModel)
     colwise = [GLPK.get_mat_col(lp,i) for i in 1:n]
     nnz = 0
     for i in 1:n
-        nnz += length(colwise[1])
+        nnz += length(colwise[i][1])
     end
     colptr = Array(Int,n+1)
     rowval = Array(Int,nnz)
-    nzval = Array(Int,nnz)
+    nzval  = Array(Float64,nnz)
     cur_nnz = 1
     for i in 1:n
         colptr[i] = cur_nnz
