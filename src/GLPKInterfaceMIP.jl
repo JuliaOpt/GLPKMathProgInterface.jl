@@ -85,7 +85,7 @@ type GLPKSolverMIP <: AbstractMathProgSolver
     GLPKSolverMIP(;presolve::Bool=false, opts...) = new(presolve, opts)
 end
 
-throw_if_abort(stat::Symbol) = (stat == :Exit && throw("Callback aborted optimization early"))
+throw_if_abort(stat) = (stat == :Exit && throw("Callback aborted optimization early"))
 
 function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     cb_data = unsafe_pointer_to_objref(info)::GLPKCallbackData
