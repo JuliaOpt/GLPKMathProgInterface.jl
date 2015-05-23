@@ -4,6 +4,8 @@ import GLPK
 importall MathProgBase.SolverInterface
 importall ..GLPKInterfaceBase
 
+using Compat
+
 export
     GLPKSolverMIP,
     GLPKCallbackData,
@@ -394,11 +396,11 @@ function setvartype!(lpm::GLPKMathProgModelMIP, vartype::Vector{Symbol})
     end
 end
 
-const vartype_map = [
+@compat const vartype_map = Dict(
     GLPK.CV => :Cont,
     GLPK.IV => :Int,
     GLPK.BV => :Bin
-]
+)
 
 function getvartype(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner

@@ -6,9 +6,9 @@ export
     GLPKSolverLP,
     GLPKSolverMIP
 
-include(joinpath(dirname(Base.source_path()), "GLPKInterfaceBase.jl"))
-include(joinpath(dirname(Base.source_path()), "GLPKInterfaceLP.jl"))
-include(joinpath(dirname(Base.source_path()), "GLPKInterfaceMIP.jl"))
+include("GLPKInterfaceBase.jl")
+include("GLPKInterfaceLP.jl")
+include("GLPKInterfaceMIP.jl")
 
 const GLPKSolverLP = GLPKInterfaceLP.GLPKSolverLP
 const GLPKSolverMIP = GLPKInterfaceMIP.GLPKSolverMIP
