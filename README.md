@@ -19,7 +19,7 @@ Example:
 ```Julia
 using MathProgBase
 using GLPKMathProgInterface
-sol = linprog([-1,0], [2 1], '<', 1.5, GLPKSolverLP(method=:Exact, presolve=true)
+sol = linprog([-1,0], [2 1], '<', 1.5, GLPKSolverLP(method=:Exact, presolve=true))
 ```
 
 Additionally, all low-level parameters which can be passed to the GLPK problem objects, such as
