@@ -1,5 +1,7 @@
 module GLPKInterfaceBase
 
+using Compat
+
 import GLPK
 
 importall MathProgBase.SolverInterface
@@ -31,7 +33,7 @@ export
 
 abstract GLPKMathProgModel <: AbstractMathProgModel
 
-function loadproblem!(lpm::GLPKMathProgModel, filename::String)
+function loadproblem!(lpm::GLPKMathProgModel, filename::AbstractString)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
        GLPK.read_mps(lpm.inner, GLPK.MPS_FILE, filename)
     elseif endswith(filename, ".lp") || endswith(filename, ".lp.gz")
@@ -41,7 +43,7 @@ function loadproblem!(lpm::GLPKMathProgModel, filename::String)
     else
        error("unrecognized input format extension in $filename")
     end
-end   
+end
 
 nonnull(x) = (x != nothing && !isempty(x))
 
@@ -112,7 +114,7 @@ function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, o
     return lpm
 end
 
-#writeproblem(m, filename::String)
+#writeproblem(m, filename::AbstractString)
 
 function getvarLB(lpm::GLPKMathProgModel)
     lp = lpm.inner

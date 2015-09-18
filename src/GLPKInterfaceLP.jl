@@ -1,5 +1,7 @@
 module GLPKInterfaceLP
 
+using Compat
+
 import GLPK
 importall MathProgBase.SolverInterface
 importall ..GLPKInterfaceBase
@@ -37,10 +39,10 @@ export
     getinfeasibilityray,
     getunboundedray
 
-type GLPKMathProgModelLP <: GLPKMathProgModel
+@compat type GLPKMathProgModelLP <: GLPKMathProgModel
     inner::GLPK.Prob
     method::Symbol
-    param::Union(GLPK.SimplexParam, GLPK.InteriorParam)
+    param::Union{GLPK.SimplexParam, GLPK.InteriorParam}
 end
 
 type GLPKSolverLP <: AbstractMathProgSolver

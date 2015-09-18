@@ -51,14 +51,14 @@ export
     cbaddcut!,
     cbaddsolution
 
-type GLPKMathProgModelMIP <: GLPKMathProgModel
+@compat type GLPKMathProgModelMIP <: GLPKMathProgModel
     inner::GLPK.Prob
     param::GLPK.IntoptParam
     smplxparam::GLPK.SimplexParam
-    lazycb::Union(Function,Nothing)
-    cutcb::Union(Function,Nothing)
-    heuristiccb::Union(Function,Nothing)
-    infocb::Union(Function,Nothing)
+    lazycb::Union{Function,Void}
+    cutcb::Union{Function,Void}
+    heuristiccb::Union{Function,Void}
+    infocb::Union{Function,Void}
     objbound::Float64
     cbdata::MathProgCallbackData
     binaries::Vector{Int}
@@ -203,12 +203,12 @@ function model(s::GLPKSolverMIP)
     return lpm
 end
 
-setlazycallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.lazycb = f)
-setcutcallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.cutcb = f)
-setheuristiccallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.heuristiccb = f)
-setinfocallback!(m::GLPKMathProgModel, f::Union(Function,Nothing)) = (m.infocb = f)
+@compat setlazycallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.lazycb = f)
+@compat setcutcallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.cutcb = f)
+@compat setheuristiccallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.heuristiccb = f)
+@compat setinfocallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.infocb = f)
 
-_check_tree(d::GLPKCallbackData, funcname::String) =
+_check_tree(d::GLPKCallbackData, funcname::AbstractString) =
     (d.tree != C_NULL && d.reason != -1) || error("$funcname can only be called from within a callback")
 
 cbgetstate(d::GLPKCallbackData) = d.state
