@@ -310,9 +310,9 @@ function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::
 end
 
 function _initsolution!(d::GLPKCallbackData)
-    isempty(d.sol) || return
     lp = GLPK.ios_get_prob(d.tree)
     n = GLPK.get_num_cols(lp)
+    length(d.sol) == n && return
     resize!(d.sol, n)
     fill!(d.sol, NaN)
     return
