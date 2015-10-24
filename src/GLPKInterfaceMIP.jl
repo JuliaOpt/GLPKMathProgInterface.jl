@@ -184,8 +184,8 @@ function model(s::GLPKSolverMIP)
             warn("ignored option: $(string(k)); use the MathProgBase callback interface instead")
             continue
         end
-        i = findfirst(x->x==k, typeof(lpm.param).names)
-        s = findfirst(x->x==k, typeof(lpm.smplxparam).names)
+        i = findfirst(x->x==k, fieldnames(typeof(lpm.param)))
+        s = findfirst(x->x==k, fieldnames(typeof(lpm.smplxparam)))
         if !(i > 0 || s > 0)
             warn("Ignored option: $(string(k))")
             continue

@@ -77,7 +77,7 @@ function model(s::GLPKSolverLP)
     end
     param.msg_lev = GLPK.MSG_ERR
     for (k,v) in s.opts
-        i = findfirst(x->x==k, typeof(param).names)
+        i = findfirst(x->x==k, fieldnames(typeof(param)))
         if i > 0
             t = typeof(param).types[i]
             setfield!(param, i, convert(t, v))
