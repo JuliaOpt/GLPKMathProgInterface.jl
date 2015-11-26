@@ -1,14 +1,11 @@
 module GLPKInterfaceLP
 
-using Compat
-
 import GLPK
 importall MathProgBase.SolverInterface
 importall ..GLPKInterfaceBase
 
 export
     GLPKSolverLP,
-    model,
     optimize!,
     loadproblem!,
     writeproblem,
@@ -39,7 +36,7 @@ export
     getinfeasibilityray,
     getunboundedray
 
-@compat type GLPKMathProgModelLP <: GLPKMathProgModel
+type GLPKMathProgModelLP <: GLPKMathProgModel
     inner::GLPK.Prob
     method::Symbol
     param::Union{GLPK.SimplexParam, GLPK.InteriorParam}
@@ -61,7 +58,7 @@ type GLPKSolverLP <: AbstractMathProgSolver
     end
 end
 
-function model(s::GLPKSolverLP)
+function LinearQuadraticModel(s::GLPKSolverLP)
     if s.method == :Simplex || s.method == :Exact
         param = GLPK.SimplexParam()
         if s.presolve

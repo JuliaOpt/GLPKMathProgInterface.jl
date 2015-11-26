@@ -1,7 +1,5 @@
 module GLPKInterfaceBase
 
-using Compat
-
 import GLPK
 
 importall MathProgBase.SolverInterface
@@ -31,7 +29,7 @@ export
     getrawsolver
 
 
-abstract GLPKMathProgModel <: AbstractMathProgModel
+abstract GLPKMathProgModel <: AbstractLinearQuadraticModel
 
 function loadproblem!(lpm::GLPKMathProgModel, filename::AbstractString)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
