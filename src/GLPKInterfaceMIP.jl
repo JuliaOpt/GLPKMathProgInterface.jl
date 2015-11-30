@@ -4,12 +4,9 @@ import GLPK
 importall MathProgBase.SolverInterface
 importall ..GLPKInterfaceBase
 
-using Compat
-
 export
     GLPKSolverMIP,
     GLPKCallbackData,
-    model,
     optimize!,
     loadproblem!,
     writeproblem,
@@ -51,7 +48,7 @@ export
     cbaddcut!,
     cbaddsolution
 
-@compat type GLPKMathProgModelMIP <: GLPKMathProgModel
+type GLPKMathProgModelMIP <: GLPKMathProgModel
     inner::GLPK.Prob
     param::GLPK.IntoptParam
     smplxparam::GLPK.SimplexParam
@@ -168,7 +165,7 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     return
 end
 
-function model(s::GLPKSolverMIP)
+function LinearQuadraticModel(s::GLPKSolverMIP)
     lpm = GLPKMathProgModelMIP()
     lpm.param.msg_lev = GLPK.MSG_ERR
     lpm.smplxparam.msg_lev = GLPK.MSG_ERR
@@ -203,10 +200,10 @@ function model(s::GLPKSolverMIP)
     return lpm
 end
 
-@compat setlazycallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.lazycb = f)
-@compat setcutcallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.cutcb = f)
-@compat setheuristiccallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.heuristiccb = f)
-@compat setinfocallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.infocb = f)
+setlazycallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.lazycb = f)
+setcutcallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.cutcb = f)
+setheuristiccallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.heuristiccb = f)
+setinfocallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.infocb = f)
 
 _check_tree(d::GLPKCallbackData, funcname::AbstractString) =
     (d.tree != C_NULL && d.reason != -1) || error("$funcname can only be called from within a callback")
@@ -396,7 +393,7 @@ function setvartype!(lpm::GLPKMathProgModelMIP, vartype::Vector{Symbol})
     end
 end
 
-@compat const vartype_map = Dict(
+const vartype_map = Dict(
     GLPK.CV => :Cont,
     GLPK.IV => :Int,
     GLPK.BV => :Bin
