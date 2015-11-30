@@ -11,6 +11,10 @@ linprogsolvertest(GLPKSolverLP())
 include(joinpath(mathprogbase_test, "mixintprog.jl"))
 mixintprogtest(GLPKSolverMIP())
 
+include(joinpath(mathprogbase_test,"conicinterface.jl"))
+coniclineartest(GLPKSolverLP())
+coniclineartest(GLPKSolverMIP())
+
 lpm = GLPKInterfaceLP.LinearQuadraticModel(GLPKSolverLP(it_lim=9513, tol_bnd=4.149))
 @test lpm.param.it_lim == 9513
 @test lpm.param.tol_bnd == 4.149
