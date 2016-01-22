@@ -50,7 +50,7 @@ Example:
 ```Julia
 using MathProgBase
 using GLPKMathProgInterface
-sol = mixintprog(-[5,3,3], [1 8 2], '<', 9, 'I', 0, 1, GLPKSolverMIP(presolve=true))
+sol = mixintprog(-[5,3,3], [1 8 2], '<', 9, :Int, 0, 1, GLPKSolverMIP(presolve=true))
 ```
 
 Additionally, as in the case of linear programming solver (see above), all low-level
