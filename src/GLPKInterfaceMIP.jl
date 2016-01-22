@@ -59,11 +59,13 @@ type GLPKMathProgModelMIP <: GLPKMathProgModel
     objbound::Float64
     cbdata::MathProgCallbackData
     binaries::Vector{Int}
+    userlimit::Bool
     function GLPKMathProgModelMIP()
         lpm = new(GLPK.Prob(), GLPK.IntoptParam(), GLPK.SimplexParam(),
                   nothing, nothing, nothing, nothing, -Inf)
         lpm.cbdata = GLPKCallbackData(lpm)
         lpm.binaries = Int[]
+        lpm.userlimit = false
         return lpm
     end
 end
@@ -84,7 +86,7 @@ type GLPKSolverMIP <: AbstractMathProgSolver
     GLPKSolverMIP(;presolve::Bool=false, opts...) = new(presolve, opts)
 end
 
-throw_if_abort(stat) = (stat == :Exit && throw("Callback aborted optimization early"))
+callback_abort(stat, tree) = (stat == :Exit && GLPK.ios_terminate(tree))
 
 function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     cb_data = unsafe_pointer_to_objref(info)::GLPKCallbackData
@@ -99,7 +101,7 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     if lpm.infocb != nothing
         cb_data.state = :MIPInfo
         stat = lpm.infocb(cb_data)
-        throw_if_abort(stat)
+        callback_abort(stat,tree)
     end
 
     if reason == GLPK.ISELECT
@@ -133,21 +135,21 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
 
         if lpm.lazycb != nothing
             stat = lpm.lazycb(cb_data)
-            throw_if_abort(stat)
+            callback_abort(stat,tree)
         end
     elseif reason == GLPK.IHEUR
         #println("reason=HEUR")
         cb_data.state = :MIPNode
         if lpm.heuristiccb != nothing
             stat = lpm.heuristiccb(cb_data)
-            throw_if_abort(stat)
+            callback_abort(stat,tree)
         end
     elseif reason == GLPK.ICUTGEN
         #println("reason=CUTGEN")
         cb_data.state = :MIPNode
         if lpm.cutcb != nothing
             stat = lpm.cutcb(cb_data)
-            throw_if_abort(stat)
+            callback_abort(stat,tree)
         end
     elseif reason == GLPK.IBRANCH
         #println("reason=BRANCH")
@@ -433,7 +435,10 @@ function optimize!(lpm::GLPKMathProgModelMIP)
             ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
             ret_ps != 0 && return ret_ps
         end
-        GLPK.intopt(lpm.inner, lpm.param)
+        ret = GLPK.intopt(lpm.inner, lpm.param)
+        if ret == GLPK.EMIPGAP || ret == GLPK.ETMLIM || ret == GLPK.ESTOP
+            lpm.userlimit = true
+        end
     finally
         setvarLB!(lpm, old_lb)
         setvarUB!(lpm, old_ub)
@@ -441,9 +446,16 @@ function optimize!(lpm::GLPKMathProgModelMIP)
 end
 
 function status(lpm::GLPKMathProgModelMIP)
+    if lpm.userlimit
+        return :UserLimit
+    end
     s = GLPK.mip_status(lpm.inner)
-    if s == GLPK.UNDEF && lpm.param.presolve == GLPK.OFF
-        s = GLPK.get_status(lpm.inner)
+    if s == GLPK.UNDEF
+        if lpm.param.presolve == GLPK.OFF && GLPK.get_status(lpm.inner) == GLPK.NOFEAS
+            return :Infeasible
+        else
+            return :Error
+        end
     end
     if s == GLPK.OPT
         return :Optimal
