@@ -228,7 +228,7 @@ function cbgetlpsolution(d::GLPKCallbackData)
     _check_tree(d, "cbgetlpsolution")
     lp = GLPK.ios_get_prob(d.tree)
     n = GLPK.get_num_cols(lp)
-    output = Vector(Float64, n)
+    output = Vector{Float64}(n)
 
     for c = 1:n
         output[c] = GLPK.get_col_prim(lp, c)
@@ -244,6 +244,7 @@ function cbgetmipsolution(d::GLPKCallbackData, output::Vector)
     # then this will need to be modified.
     return cbgetlpsolution(d, output)
 end
+cbgetmipsolution(d::GLPKCallbackData) = cbgetlpsolution(d)
 
 function cbgetbestbound(d::GLPKCallbackData)
     _check_tree(d, "cbbestbound")
