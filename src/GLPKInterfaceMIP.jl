@@ -284,6 +284,16 @@ function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense:
     else
         error("sense must be '=', '<' or '>'")
     end
+    # allocating a new vector is not efficient
+    solution = cbgetmipsolution(d)
+    # if the cut does not exclude the current solution, ignore it
+    val = dot(colcoef,solution[colidx])
+    if (rowlb - 1e-8 <= val <= rowub + 1e-8)
+        # would be better to use GLPK's internal tolerances
+        #Base.warn_once("Ignoring lazy constraint which is already satisfied")
+        return
+    end
+
     lp = GLPK.ios_get_prob(d.tree)
     GLPK.add_rows(lp, 1)
     m = GLPK.get_num_rows(lp)
