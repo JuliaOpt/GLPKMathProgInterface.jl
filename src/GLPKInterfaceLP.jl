@@ -21,7 +21,6 @@ export
     setobj!,
     addvar!,
     addconstr!,
-    updatemodel!,
     setsense!,
     getsense,
     numvar,

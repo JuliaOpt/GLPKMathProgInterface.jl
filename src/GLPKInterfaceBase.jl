@@ -21,7 +21,6 @@ export
     setobj!,
     addvar!,
     addconstr!,
-    updatemodel!,
     setsense!,
     getsense,
     numvar,
@@ -400,8 +399,6 @@ function addconstr!(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, row
     GLPK.set_row_bnds(lp, m, bt, rowlb, rowub)
     return
 end
-
-updatemodel!(m::GLPKMathProgModel) = nothing
 
 function setsense!(lpm::GLPKMathProgModel, sense)
     lp = lpm.inner
