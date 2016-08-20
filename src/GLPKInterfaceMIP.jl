@@ -98,7 +98,7 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     # Doesn't seem like there's a natural "reason" to put this with,
     # so let's just call it everywhere for now
     if lpm.infocb != nothing
-        cb_data.state = :MIPInfo
+        cb_data.state = :Intermediate
         stat = lpm.infocb(cb_data)
         callback_abort(stat,tree)
     end
