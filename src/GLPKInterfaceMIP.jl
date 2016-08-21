@@ -95,17 +95,9 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     reason = GLPK.ios_reason(tree)
     cb_data.reason = reason
 
-    # Doesn't seem like there's a natural "reason" to put this with,
-    # so let's just call it everywhere for now
-    if lpm.infocb != nothing
-        cb_data.state = :Intermediate
-        stat = lpm.infocb(cb_data)
-        callback_abort(stat,tree)
-    end
-
     if reason == GLPK.ISELECT
         #println("reason=SELECT")
-        cb_data.state = :Other
+        cb_data.state = :Intermediate
     elseif reason == GLPK.IPREPRO
         #println("reason=PREPRO")
         cb_data.state = :MIPNode
@@ -158,6 +150,13 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
         cb_data.state = :MIPSol
     else
         error("internal library error")
+    end
+
+    # Doesn't seem like there's a natural "reason" to put this with,
+    # so let's just call it everywhere for now
+    if lpm.infocb != nothing
+        stat = lpm.infocb(cb_data)
+        callback_abort(stat,tree)
     end
 
     bn = GLPK.ios_best_node(tree)
