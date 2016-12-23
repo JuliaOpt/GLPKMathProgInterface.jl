@@ -375,7 +375,10 @@ function addvar!(lpm::GLPKMathProgModel, rowidx::Vector, rowcoef::Vector, collb:
     return
 end
 
-delvars!(lpm::GLPKMathProgModel, idx::Vector) = GLPK.del_cols(lpm.inner, length(idx), idx)
+function delvars!(lpm::GLPKMathProgModel, idx::Vector) 
+    GLPK.std_basis(lpm.inner)
+    GLPK.del_cols(lpm.inner, length(idx), idx)
+end
 
 function addconstr!(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, rowlb::Real, rowub::Real)
     if length(colidx) != length(colcoef)
@@ -402,7 +405,10 @@ function addconstr!(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, row
     return
 end
 
-delconstrs!(lpm::GLPKMathProgModel, idx::Vector) = GLPK.del_rows(lpm.inner, length(idx), idx)
+function delconstrs!(lpm::GLPKMathProgModel, idx::Vector) 
+    GLPK.std_basis(lpm.inner)
+    GLPK.del_rows(lpm.inner, length(idx), idx)
+end
 
 
 function setsense!(lpm::GLPKMathProgModel, sense)
