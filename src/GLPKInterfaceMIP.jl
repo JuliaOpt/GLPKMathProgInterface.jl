@@ -69,6 +69,26 @@ type GLPKMathProgModelMIP <: GLPKMathProgModel
     end
 end
 
+function Base.copy(m::GLPKMathProgModelMIP)
+
+    m2 = GLPKMathProgModelMIP()
+
+    GLPK.copy_prob(m2.inner, m.inner, GLPK.ON)
+
+    m2.param = deepcopy(m.param)
+    m2.smplxparam = deepcopy(m.smplxparam)
+    m2.lazycb = deepcopy(m.lazycb)
+    m2.cutcb = deepcopy(m.cutcb)
+    m2.heuristiccb = deepcopy(m.heuristiccb)
+    m2.infocb = deepcopy(m.infocb)
+    m2.objbound = m.objbound
+    m2.cbdata = deepcopy(m.cbdata)
+    m2.binaries = deepcopy(m.binaries)
+    m2.userlimit = m.userlimit
+
+    return m2
+end
+
 type GLPKCallbackData <: MathProgCallbackData
     model::GLPKMathProgModelMIP
     tree::Ptr{Void}

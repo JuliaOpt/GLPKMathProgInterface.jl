@@ -57,6 +57,15 @@ type GLPKSolverLP <: AbstractMathProgSolver
     end
 end
 
+function Base.copy(m::GLPKMathProgModelLP)
+
+    m2inner = GLPK.Prob()
+
+    GLPK.copy_prob(m2inner, m.inner, GLPK.ON)
+
+    return  GLPKMathProgModelLP(m2inner, m.method, deepcopy(m.param))
+end
+
 function LinearQuadraticModel(s::GLPKSolverLP)
     if s.method == :Simplex || s.method == :Exact
         param = GLPK.SimplexParam()
