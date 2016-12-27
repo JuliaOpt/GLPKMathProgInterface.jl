@@ -77,12 +77,16 @@ function Base.copy(m::GLPKMathProgModelMIP)
 
     m2.param = deepcopy(m.param)
     m2.smplxparam = deepcopy(m.smplxparam)
-    m2.lazycb = deepcopy(m.lazycb)
-    m2.cutcb = deepcopy(m.cutcb)
-    m2.heuristiccb = deepcopy(m.heuristiccb)
-    m2.infocb = deepcopy(m.infocb)
+    
+    m.lazycb == nothing || Base.warn_once("Callbacks can't be copied, lazy callback ignored")
+    m.cutcb == nothing || Base.warn_once("Callbacks can't be copied, cut callback ignored")
+    m.heuristiccb == nothing || Base.warn_once("Callbacks can't be copied, heuristic callback ignored")
+    m.infocb == nothing || Base.warn_once("Callbacks can't be copied, info callback ignored")
+    
     m2.objbound = m.objbound
-    m2.cbdata = deepcopy(m.cbdata)
+
+    m.cbdata == nothing || Base.warn_once("Callbacks can't be copied, callbackdata ignored")
+
     m2.binaries = deepcopy(m.binaries)
     m2.userlimit = m.userlimit
 
