@@ -423,7 +423,7 @@ function getsense(lpm::GLPKMathProgModel)
     end
 end
 
-numvar(lpm::GLPKMathProgModel) = GLPK.get_num_cols(lpm.inner) 
+numvar(lpm::GLPKMathProgModel) = GLPK.get_num_cols(lpm.inner)
 numconstr(lpm::GLPKMathProgModel) = GLPK.get_num_rows(lpm.inner)
 
 getrawsolver(lpm::GLPKMathProgModel) = lpm.inner
