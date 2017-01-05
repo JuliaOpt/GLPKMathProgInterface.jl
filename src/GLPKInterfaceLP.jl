@@ -39,6 +39,7 @@ type GLPKMathProgModelLP <: GLPKMathProgModel
     inner::GLPK.Prob
     method::Symbol
     param::Union{GLPK.SimplexParam, GLPK.InteriorParam}
+    infeasible_bounds::Bool
 end
 
 type GLPKSolverLP <: AbstractMathProgSolver
@@ -81,24 +82,45 @@ function LinearQuadraticModel(s::GLPKSolverLP)
             warn("Ignored option: $(string(k))")
         end
     end
-    lpm = GLPKMathProgModelLP(GLPK.Prob(), s.method, param)
+    lpm = GLPKMathProgModelLP(GLPK.Prob(), s.method, param, false)
     return lpm
 end
 
 function optimize!(lpm::GLPKMathProgModelLP)
-    if lpm.method == :Simplex
-        solve = GLPK.simplex
-    elseif lpm.method == :Exact
-        solve = GLPK.exact
-    elseif lpm.method == :InteriorPoint
-        solve = GLPK.interior
-    else
-        error("bug")
+    lpm.infeasible_bounds = false
+    lp = lpm.inner
+    for c in 1:numvar(lpm)
+        if GLPK.get_col_lb(lp, c) > GLPK.get_col_ub(lp, c)
+            lpm.infeasible_bounds = true
+            break
+        end
     end
-    return solve(lpm.inner, lpm.param)
+    if !lpm.infeasible_bounds
+        for r in 1:numconstr(lpm)
+            if GLPK.get_row_lb(lp, r) > GLPK.get_row_ub(lp, r)
+                lpm.infeasible_bounds = true
+                break
+            end
+        end
+    end
+    if !lpm.infeasible_bounds
+        if lpm.method == :Simplex
+            solve = GLPK.simplex
+        elseif lpm.method == :Exact
+            solve = GLPK.exact
+        elseif lpm.method == :InteriorPoint
+            solve = GLPK.interior
+        else
+            error("bug")
+        end
+        return solve(lpm.inner, lpm.param)
+    end
 end
 
 function status(lpm::GLPKMathProgModelLP)
+    if lpm.infeasible_bounds
+        return :Infeasible
+    end
     if lpm.method == :Simplex || lpm.method == :Exact
         get_status = GLPK.get_status
     elseif lpm.method == :InteriorPoint
@@ -125,6 +147,13 @@ function status(lpm::GLPKMathProgModelLP)
 end
 
 function getobjval(lpm::GLPKMathProgModelLP)
+    if lpm.infeasible_bounds
+        if GLPK.get_obj_dir(lpm.inner) == GLPK.MAX
+            return -Inf
+        else
+            return Inf
+        end
+    end
     if lpm.method == :Simplex || lpm.method == :Exact
         get_obj_val = GLPK.get_obj_val
     elseif lpm.method == :InteriorPoint
@@ -135,7 +164,15 @@ function getobjval(lpm::GLPKMathProgModelLP)
     return get_obj_val(lpm.inner)
 end
 
+function check_feasible_bounds(lpm::GLPKMathProgModelLP, name::String)
+    if lpm.infeasible_bounds
+        error("$name is not available when some constraint bounds are infeasible (lower bound > upper bound)")
+    end
+end
+
+
 function getsolution(lpm::GLPKMathProgModelLP)
+    check_feasible_bounds(lpm, "getsolution")
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
@@ -155,6 +192,7 @@ function getsolution(lpm::GLPKMathProgModelLP)
 end
 
 function getconstrsolution(lpm::GLPKMathProgModelLP)
+    check_feasible_bounds(lpm, "getconstrsolution")
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
@@ -174,6 +212,7 @@ function getconstrsolution(lpm::GLPKMathProgModelLP)
 end
 
 function getreducedcosts(lpm::GLPKMathProgModelLP)
+    check_feasible_bounds(lpm, "getreducedcosts")
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
@@ -193,6 +232,8 @@ function getreducedcosts(lpm::GLPKMathProgModelLP)
 end
 
 function getconstrduals(lpm::GLPKMathProgModelLP)
+    check_feasible_bounds(lpm, "getconstrduals")
+
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
@@ -227,6 +268,11 @@ end
 ### purpose.
 
 function getinfeasibilityray(lpm::GLPKMathProgModelLP)
+    if lpm.infeasible_bounds
+        # See https://github.com/JuliaOpt/GLPKMathProgInterface.jl/pull/34
+        return zeros(numconstr(lpm))
+    end
+
     lp = lpm.inner
 
     if lpm.method == :Simplex || lpm.method == :Exact
@@ -304,6 +350,8 @@ function getinfeasibilityray(lpm::GLPKMathProgModelLP)
 end
 
 function getunboundedray(lpm::GLPKMathProgModelLP)
+    check_feasible_bounds(lpm, "getreducedcosts")
+
     lp = lpm.inner
 
     if lpm.method == :Simplex || lpm.method == :Exact

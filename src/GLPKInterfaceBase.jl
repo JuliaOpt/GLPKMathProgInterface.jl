@@ -82,18 +82,24 @@ function loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colub, o
     end
 
     m > 0 && GLPK.add_rows(lp, m)
+    prev_preemptive_check = GLPK.jl_get_preemptive_check()
+    GLPK.jl_set_preemptive_check(false)
     for r = 1:m
         #println("  r=$r b=$(b[r])")
         l, u, t = getbounds(rowlb, rowub, r)
         GLPK.set_row_bnds(lp, r, t, l, u)
     end
+    GLPK.jl_set_preemptive_check(prev_preemptive_check)
 
     n > 0 && GLPK.add_cols(lp, n)
+    prev_preemptive_check = GLPK.jl_get_preemptive_check()
+    GLPK.jl_set_preemptive_check(false)
     for c = 1:n
         #println("  r=$r b=$(b[r])")
         l, u, t = getbounds(collb, colub, c)
         GLPK.set_col_bnds(lp, c, t, l, u)
     end
+    GLPK.jl_set_preemptive_check(prev_preemptive_check)
 
     if nonnull(obj)
         for c = 1:n
@@ -133,6 +139,8 @@ function setvarLB!(lpm::GLPKMathProgModel, collb)
     if nonnull(collb) && length(collb) != n
         error("invalid size of collb")
     end
+    prev_preemptive_check = GLPK.jl_get_preemptive_check()
+    GLPK.jl_set_preemptive_check(false)
     for c = 1:n
         u = GLPK.get_col_ub(lp, c)
         if u >= realmax(Float64)
@@ -157,6 +165,7 @@ function setvarLB!(lpm::GLPKMathProgModel, collb)
             end
         end
     end
+    GLPK.jl_set_preemptive_check(prev_preemptive_check)
 end
 
 function getvarUB(lpm::GLPKMathProgModel)
@@ -179,6 +188,8 @@ function setvarUB!(lpm::GLPKMathProgModel, colub)
     if nonnull(colub) && length(colub) != n
         error("invalid size of colub")
     end
+    prev_preemptive_check = GLPK.jl_get_preemptive_check()
+    GLPK.jl_set_preemptive_check(false)
     for c = 1:n
         l = GLPK.get_col_lb(lp, c)
         if l <= -realmax(Float64)
@@ -203,6 +214,7 @@ function setvarUB!(lpm::GLPKMathProgModel, colub)
             end
         end
     end
+    GLPK.jl_set_preemptive_check(prev_preemptive_check)
 end
 
 function getconstrLB(lpm::GLPKMathProgModel)
@@ -225,6 +237,8 @@ function setconstrLB!(lpm::GLPKMathProgModel, rowlb)
     if nonnull(rowlb) && length(rowlb) != m
         error("invalid size of rowlb")
     end
+    prev_preemptive_check = GLPK.jl_get_preemptive_check()
+    GLPK.jl_set_preemptive_check(false)
     for r = 1:m
         u = GLPK.get_row_ub(lp, r)
         if u >= realmax(Float64)
@@ -249,6 +263,7 @@ function setconstrLB!(lpm::GLPKMathProgModel, rowlb)
             end
         end
     end
+    GLPK.jl_set_preemptive_check(prev_preemptive_check)
 end
 
 function getconstrUB(lpm::GLPKMathProgModel)
@@ -271,6 +286,8 @@ function setconstrUB!(lpm::GLPKMathProgModel, rowub)
     if nonnull(rowub) && length(rowub) != m
         error("invalid size of rowub")
     end
+    prev_preemptive_check = GLPK.jl_get_preemptive_check()
+    GLPK.jl_set_preemptive_check(false)
     for r = 1:m
         l = GLPK.get_row_lb(lp, r)
         if l <= -realmax(Float64)
@@ -295,6 +312,7 @@ function setconstrUB!(lpm::GLPKMathProgModel, rowub)
             end
         end
     end
+    GLPK.jl_set_preemptive_check(prev_preemptive_check)
 end
 
 function getconstrmatrix(lpm::GLPKMathProgModel)
