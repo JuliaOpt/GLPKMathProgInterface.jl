@@ -184,7 +184,7 @@ function getsolution(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array(Float64, n)
+    x = Array{Float64}(n)
     for c = 1:n
         x[c] = get_col_prim(lp, c)
     end
@@ -204,7 +204,7 @@ function getconstrsolution(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array(Float64, m)
+    x = Array{Float64}(m)
     for r = 1:m
         x[r] = get_row_prim(lp, r)
     end
@@ -224,7 +224,7 @@ function getreducedcosts(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array(Float64, n)
+    x = Array{Float64}(n)
     for c = 1:n
         x[c] = get_col_dual(lp, c)
     end
@@ -245,7 +245,7 @@ function getconstrduals(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array(Float64, m)
+    x = Array{Float64}(m)
     for r = 1:m
         x[r] = get_row_dual(lp, r)
     end

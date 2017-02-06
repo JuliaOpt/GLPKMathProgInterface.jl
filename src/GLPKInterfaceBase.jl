@@ -122,7 +122,7 @@ end
 function getvarLB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
-    lb = Array(Float64, n)
+    lb = Array{Float64}(n)
     for c = 1:n
         l = GLPK.get_col_lb(lp, c)
         if l <= -realmax(Float64)
@@ -171,7 +171,7 @@ end
 function getvarUB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
-    ub = Array(Float64, n)
+    ub = Array{Float64}(n)
     for c = 1:n
         u = GLPK.get_col_ub(lp, c)
         if u >= realmax(Float64)
@@ -220,7 +220,7 @@ end
 function getconstrLB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
-    lb = Array(Float64, m)
+    lb = Array{Float64}(m)
     for r = 1:m
         l = GLPK.get_row_lb(lp, r)
         if l <= -realmax(Float64)
@@ -269,7 +269,7 @@ end
 function getconstrUB(lpm::GLPKMathProgModel)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
-    ub = Array(Float64, m)
+    ub = Array{Float64}(m)
     for r = 1:m
         u = GLPK.get_row_ub(lp, r)
         if u >= realmax(Float64)
@@ -324,9 +324,9 @@ function getconstrmatrix(lpm::GLPKMathProgModel)
     for i in 1:n
         nnz += length(colwise[i][1])
     end
-    colptr = Array(Int,n+1)
-    rowval = Array(Int,nnz)
-    nzval  = Array(Float64,nnz)
+    colptr = Array{Int}(n+1)
+    rowval = Array{Int}(nnz)
+    nzval  = Array{Float64}(nnz)
     cur_nnz = 1
     for i in 1:n
         colptr[i] = cur_nnz
@@ -344,7 +344,7 @@ end
 function getobj(lpm::GLPKMathProgModel)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
-    obj = Array(Float64, n)
+    obj = Array{Float64}(n)
     for c = 1:n
         l = GLPK.get_obj_coef(lp, c)
         obj[c] = l
