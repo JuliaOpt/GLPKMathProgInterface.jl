@@ -64,7 +64,7 @@ function Base.copy(m::GLPKMathProgModelLP)
 
     GLPK.copy_prob(m2inner, m.inner, GLPK.ON)
 
-    return  GLPKMathProgModelLP(m2inner, m.method, deepcopy(m.param))
+    return GLPKMathProgModelLP(m2inner, m.method, deepcopy(m.param), m.infeasible_bounds)
 end
 
 function LinearQuadraticModel(s::GLPKSolverLP)
