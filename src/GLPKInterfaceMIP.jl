@@ -413,7 +413,7 @@ const vartype_map = Dict(
 function getvartype(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     ncol = numvar(lpm)
-    coltype = Array(Symbol, ncol)
+    coltype = Array{Symbol}(ncol)
     for i in 1:ncol
         ct = GLPK.get_col_kind(lp, i)
         coltype[i] = vartype_map[ct]
@@ -491,7 +491,7 @@ function getsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
 
-    x = Array(Float64, n)
+    x = Array{Float64}(n)
     for c = 1:n
         x[c] = GLPK.mip_col_val(lp, c)
     end
@@ -502,7 +502,7 @@ function getconstrsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
-    x = Array(Float64, m)
+    x = Array{Float64}(m)
     for r = 1:m
         x[r] = GLPK.mip_row_val(lp, r)
     end
