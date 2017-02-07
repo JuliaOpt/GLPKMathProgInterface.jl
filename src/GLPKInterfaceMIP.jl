@@ -69,6 +69,30 @@ type GLPKMathProgModelMIP <: GLPKMathProgModel
     end
 end
 
+function Base.copy(m::GLPKMathProgModelMIP)
+
+    m2 = GLPKMathProgModelMIP()
+
+    GLPK.copy_prob(m2.inner, m.inner, GLPK.ON)
+
+    m2.param = deepcopy(m.param)
+    m2.smplxparam = deepcopy(m.smplxparam)
+    
+    m.lazycb == nothing || Base.warn_once("Callbacks can't be copied, lazy callback ignored")
+    m.cutcb == nothing || Base.warn_once("Callbacks can't be copied, cut callback ignored")
+    m.heuristiccb == nothing || Base.warn_once("Callbacks can't be copied, heuristic callback ignored")
+    m.infocb == nothing || Base.warn_once("Callbacks can't be copied, info callback ignored")
+    
+    m2.objbound = m.objbound
+
+    m.cbdata == nothing || Base.warn_once("Callbacks can't be copied, callbackdata ignored")
+
+    m2.binaries = deepcopy(m.binaries)
+    m2.userlimit = m.userlimit
+
+    return m2
+end
+
 type GLPKCallbackData <: MathProgCallbackData
     model::GLPKMathProgModelMIP
     tree::Ptr{Void}

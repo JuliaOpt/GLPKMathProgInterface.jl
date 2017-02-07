@@ -393,6 +393,11 @@ function addvar!(lpm::GLPKMathProgModel, rowidx::Vector, rowcoef::Vector, collb:
     return
 end
 
+function delvars!(lpm::GLPKMathProgModel, idx::Vector) 
+    GLPK.std_basis(lpm.inner)
+    GLPK.del_cols(lpm.inner, length(idx), idx)
+end
+
 function addconstr!(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, rowlb::Real, rowub::Real)
     if length(colidx) != length(colcoef)
         error("colidx and colcoef have different legths")
@@ -417,6 +422,12 @@ function addconstr!(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, row
     GLPK.set_row_bnds(lp, m, bt, rowlb, rowub)
     return
 end
+
+function delconstrs!(lpm::GLPKMathProgModel, idx::Vector) 
+    GLPK.std_basis(lpm.inner)
+    GLPK.del_rows(lpm.inner, length(idx), idx)
+end
+
 
 function setsense!(lpm::GLPKMathProgModel, sense)
     lp = lpm.inner
