@@ -509,7 +509,17 @@ end
 
 getobjval(lpm::GLPKMathProgModelMIP) = GLPK.mip_obj_val(lpm.inner)
 
-getobjbound(lpm::GLPKMathProgModelMIP) = lpm.objbound
+function getobjbound(lpm::GLPKMathProgModelMIP)
+    # This is a hack. We observed some cases where mip_status == OPT
+    # and objval and objbound didn't match.
+    # We can fix this case, but objbound may still be incorrect in
+    # cases where the solver terminates early.
+    if GLPK.mip_status(lpm.inner) == GLPK.OPT
+        return GLPK.mip_obj_val(lpm.inner)
+    else
+        return lpm.objbound
+    end
+end
 
 function getsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
