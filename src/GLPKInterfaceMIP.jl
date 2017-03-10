@@ -224,6 +224,38 @@ function LinearQuadraticModel(s::GLPKSolverMIP)
     return lpm
 end
 
+function setparameters!(s::GLPKSolverMIP; mpboptions...)
+    opts = collect(s.opts)
+    for (optname, optval) in mpboptions
+        if optname == :TimeLimit
+            push!(opts, (:tm_lim,round(Int,1000*optval))) # milliseconds
+        elseif optname == :Silent
+            if optval == true
+                push!(opts, (:msg_lev,GLPK.MSG_OFF))
+            end
+        else
+            error("Unrecognized parameter $optname")
+        end
+    end
+    s.opts = opts
+    nothing
+end
+
+function setparameters!(m::GLPKMathProgModelMIP; mpboptions...)
+    for (optname, optval) in mpboptions
+        if optname == :TimeLimit
+            m.param.tm_lim = round(Int,1000*optval)
+        elseif optname == :Silent
+            if optval == true
+                m.param.msg_lev = GLPK.MSG_OFF
+                m.smplxparam.msg_lev = GLPK.MSG_OFF
+            end
+        else
+            error("Unrecognized parameter $optname")
+        end
+    end
+end
+
 setlazycallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.lazycb = f)
 setcutcallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.cutcb = f)
 setheuristiccallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.heuristiccb = f)

@@ -12,5 +12,11 @@
 
     include(joinpath(mathprogbase_test,"conicinterface.jl"))
     coniclineartest(GLPKSolverLP())
-    coniclineartest(GLPKSolverMIP())
+
+    solver = GLPKSolverMIP(msg_lev=GLPK.MSG_ALL)
+
+    # Silent should override GLPK.MSG_ALL
+    MathProgBase.setparameters!(solver, Silent=true, TimeLimit=100.0)
+    coniclineartest(solver)
+
 end
