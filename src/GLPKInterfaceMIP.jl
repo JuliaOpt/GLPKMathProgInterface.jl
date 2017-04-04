@@ -77,12 +77,12 @@ function Base.copy(m::GLPKMathProgModelMIP)
 
     m2.param = deepcopy(m.param)
     m2.smplxparam = deepcopy(m.smplxparam)
-    
+
     m.lazycb == nothing || Base.warn_once("Callbacks can't be copied, lazy callback ignored")
     m.cutcb == nothing || Base.warn_once("Callbacks can't be copied, cut callback ignored")
     m.heuristiccb == nothing || Base.warn_once("Callbacks can't be copied, heuristic callback ignored")
     m.infocb == nothing || Base.warn_once("Callbacks can't be copied, info callback ignored")
-    
+
     m2.objbound = m.objbound
 
     m.cbdata == nothing || Base.warn_once("Callbacks can't be copied, callbackdata ignored")
@@ -539,7 +539,15 @@ function status(lpm::GLPKMathProgModelMIP)
     end
 end
 
-getobjval(lpm::GLPKMathProgModelMIP) = GLPK.mip_obj_val(lpm.inner)
+function getobjval(lpm::GLPKMathProgModelMIP)
+    status = GLPK.mip_status(lpm.inner)
+    if status == GLPK.UNDEF || status == GLPK.NOFEAS
+        # no feasible solution so objective is NaN
+        return NaN
+    end
+
+    return GLPK.mip_obj_val(lpm.inner)
+end
 
 function getobjbound(lpm::GLPKMathProgModelMIP)
     # This is a hack. We observed some cases where mip_status == OPT
@@ -556,6 +564,11 @@ end
 function getsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
+    status = GLPK.mip_status(lpm.inner)
+    if status == GLPK.UNDEF || status == GLPK.NOFEAS
+        # no feasible solution to return
+        return fill(NaN, n)
+    end
 
     x = Array{Float64}(n)
     for c = 1:n
