@@ -1,5 +1,7 @@
 module GLPKInterfaceLP
 
+using Compat
+
 import GLPK
 importall MathProgBase.SolverInterface
 importall ..GLPKInterfaceBase
@@ -394,7 +396,7 @@ function getunboundedray(lpm::GLPKMathProgModelLP)
             ri > m && (ray[ri - m] = rv)
         end
 
-        if (GLPK.get_obj_dir(lp) == GLPK.MAX) $ (get_dual(lp, k) > 0)
+        if (GLPK.get_obj_dir(lp) == GLPK.MAX) ⊻ (get_dual(lp, k) > 0)
             scale!(ray, -1.0)
         end
     else

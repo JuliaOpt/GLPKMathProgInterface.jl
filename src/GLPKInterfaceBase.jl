@@ -1,5 +1,6 @@
 module GLPKInterfaceBase
 
+using Compat
 import GLPK
 
 importall MathProgBase.SolverInterface
@@ -28,7 +29,7 @@ export
     getrawsolver
 
 
-abstract GLPKMathProgModel <: AbstractLinearQuadraticModel
+@compat abstract type GLPKMathProgModel <: AbstractLinearQuadraticModel end
 
 function loadproblem!(lpm::GLPKMathProgModel, filename::AbstractString)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
@@ -393,7 +394,7 @@ function addvar!(lpm::GLPKMathProgModel, rowidx::Vector, rowcoef::Vector, collb:
     return
 end
 
-function delvars!(lpm::GLPKMathProgModel, idx::Vector) 
+function delvars!(lpm::GLPKMathProgModel, idx::Vector)
     GLPK.std_basis(lpm.inner)
     GLPK.del_cols(lpm.inner, length(idx), idx)
 end
@@ -423,7 +424,7 @@ function addconstr!(lpm::GLPKMathProgModel, colidx::Vector, colcoef::Vector, row
     return
 end
 
-function delconstrs!(lpm::GLPKMathProgModel, idx::Vector) 
+function delconstrs!(lpm::GLPKMathProgModel, idx::Vector)
     GLPK.std_basis(lpm.inner)
     GLPK.del_rows(lpm.inner, length(idx), idx)
 end
