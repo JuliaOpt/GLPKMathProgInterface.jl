@@ -29,7 +29,7 @@ export
     getrawsolver
 
 
-@compat abstract type GLPKMathProgModel <: AbstractLinearQuadraticModel end
+abstract type GLPKMathProgModel <: AbstractLinearQuadraticModel end
 
 function loadproblem!(lpm::GLPKMathProgModel, filename::AbstractString)
     if endswith(filename, ".mps") || endswith(filename, ".mps.gz")
