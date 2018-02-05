@@ -207,17 +207,15 @@ function LinearQuadraticModel(s::GLPKSolverMIP)
         end
         i = findfirst(x->x==k, fieldnames(typeof(lpm.param)))
         s = findfirst(x->x==k, fieldnames(typeof(lpm.smplxparam)))
-        if !(i > 0 || s > 0)
-            warn("Ignored option: $(string(k))")
-            continue
-        end
-        if i > 0
+        if (VERSION < v"0.7-" && i > 0) || (VERSION >= v"0.7-" && i !== nothing)
             t = typeof(lpm.param).types[i]
             setfield!(lpm.param, i, convert(t, v))
-        end
-        if s > 0
+        elseif (VERSION < v"0.7-" && s > 0) || (VERSION >= v"0.7-" && s !== nothing)
             t = typeof(lpm.smplxparam).types[s]
             setfield!(lpm.smplxparam, s, convert(t, v))
+        else
+            warn("Ignored option: $(string(k))")
+            continue
         end
     end
 
@@ -225,7 +223,7 @@ function LinearQuadraticModel(s::GLPKSolverMIP)
 end
 
 function setparameters!(s::GLPKSolverMIP; mpboptions...)
-    opts = collect(s.opts)
+    opts = collect(Any, s.opts)
     for (optname, optval) in mpboptions
         if optname == :TimeLimit
             push!(opts, (:tm_lim,round(Int,1000*optval))) # milliseconds

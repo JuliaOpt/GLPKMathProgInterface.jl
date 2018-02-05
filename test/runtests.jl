@@ -1,4 +1,4 @@
-using GLPKMathProgInterface, Base.Test
+using GLPKMathProgInterface, GLPK, Base.Test
 
 include("params.jl")
 include("setbounds.jl")
