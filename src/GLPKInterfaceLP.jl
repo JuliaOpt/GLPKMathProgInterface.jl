@@ -86,7 +86,7 @@ function LinearQuadraticModel(s::GLPKSolverLP)
     param.msg_lev = GLPK.MSG_ERR
     for (k,v) in s.opts
         i = findfirst(x->x==k, fieldnames(typeof(param)))
-        if i > 0
+        if (VERSION < v"0.7-" && i > 0) || (VERSION >= v"0.7-" && i !== nothing)
             t = typeof(param).types[i]
             setfield!(param, i, convert(t, v))
         else
