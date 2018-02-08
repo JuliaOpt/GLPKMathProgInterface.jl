@@ -2,8 +2,8 @@ GLPKMathProgInterface.jl
 ========================
 
 [![Build Status](https://travis-ci.org/JuliaOpt/GLPKMathProgInterface.jl.svg?branch=master)](https://travis-ci.org/JuliaOpt/GLPKMathProgInterface.jl)
-[![GLPKMathProgInterface](http://pkg.julialang.org/badges/GLPKMathProgInterface_0.5.svg)](http://pkg.julialang.org/?pkg=GLPKMathProgInterface&ver=0.5)
-[![GLPKMathProgInterface](http://pkg.julialang.org/badges/GLPKMathProgInterface_0.6.svg)](http://pkg.julialang.org/?pkg=GLPKMathProgInterface&ver=0.6)
+[![GLPKMathProgInterface](http://pkg.julialang.org/badges/GLPKMathProgInterface_0.6.svg)](https://pkg.julialang.org/detail/GLPKMathProgInterface)
+[![GLPKMathProgInterface](http://pkg.julialang.org/badges/GLPKMathProgInterface_0.7.svg)](https://pkg.julialang.org/detail/GLPKMathProgInterface)
 
 Interface between the [GLPK.jl] wrapper and [MathProgBase.jl].
 With this package, you can use the GLPK solver in MathProgBase.jl
