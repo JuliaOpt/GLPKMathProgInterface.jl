@@ -47,7 +47,7 @@ export
     cbaddcut!,
     cbaddsolution
 
-type GLPKMathProgModelMIP <: GLPKMathProgModel
+mutable struct GLPKMathProgModelMIP <: GLPKMathProgModel
     inner::GLPK.Prob
     param::GLPK.IntoptParam
     smplxparam::GLPK.SimplexParam
@@ -93,7 +93,7 @@ function Base.copy(m::GLPKMathProgModelMIP)
     return m2
 end
 
-type GLPKCallbackData <: MathProgCallbackData
+mutable struct GLPKCallbackData <: MathProgCallbackData
     model::GLPKMathProgModelMIP
     tree::Ptr{Void}
     state::Symbol
@@ -103,7 +103,7 @@ type GLPKCallbackData <: MathProgCallbackData
     GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1, Float64[], Char[])
 end
 
-type GLPKSolverMIP <: AbstractMathProgSolver
+mutable struct GLPKSolverMIP <: AbstractMathProgSolver
     presolve::Bool
     opts
     GLPKSolverMIP(;presolve::Bool=false, opts...) = new(presolve, opts)

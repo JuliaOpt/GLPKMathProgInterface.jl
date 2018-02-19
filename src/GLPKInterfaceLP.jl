@@ -37,14 +37,14 @@ export
     getinfeasibilityray,
     getunboundedray
 
-type GLPKMathProgModelLP <: GLPKMathProgModel
+mutable struct GLPKMathProgModelLP <: GLPKMathProgModel
     inner::GLPK.Prob
     method::Symbol
     param::Union{GLPK.SimplexParam, GLPK.InteriorParam}
     infeasible_bounds::Bool
 end
 
-type GLPKSolverLP <: AbstractMathProgSolver
+mutable struct GLPKSolverLP <: AbstractMathProgSolver
     presolve::Bool
     method::Symbol
     opts
