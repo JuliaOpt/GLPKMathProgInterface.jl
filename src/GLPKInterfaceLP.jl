@@ -1,41 +1,15 @@
 module GLPKInterfaceLP
 
 using Compat
+using Compat.SparseArrays
+using Compat.LinearAlgebra
 
 import GLPK
-importall MathProgBase.SolverInterface
-importall ..GLPKInterfaceBase
+import MathProgBase
+const MPB = MathProgBase
+using ..GLPKInterfaceBase
 
-export
-    GLPKSolverLP,
-    optimize!,
-    loadproblem!,
-    writeproblem,
-    getvarLB,
-    setvarLB!,
-    getvarUB,
-    setvarUB!,
-    getconstrLB,
-    setconstrLB!,
-    getconstrUB,
-    setconstrUB!,
-    getobj,
-    setobj!,
-    addvar!,
-    addconstr!,
-    setsense!,
-    getsense,
-    numvar,
-    numconstr,
-    status,
-    getobjval,
-    getsolution,
-    getconstrsolution,
-    getreducedcosts,
-    getconstrduals,
-    getrawsolver,
-    getinfeasibilityray,
-    getunboundedray
+export GLPKSolverLP
 
 mutable struct GLPKMathProgModelLP <: GLPKMathProgModel
     inner::GLPK.Prob
@@ -44,7 +18,7 @@ mutable struct GLPKMathProgModelLP <: GLPKMathProgModel
     infeasible_bounds::Bool
 end
 
-mutable struct GLPKSolverLP <: AbstractMathProgSolver
+mutable struct GLPKSolverLP <: MPB.AbstractMathProgSolver
     presolve::Bool
     method::Symbol
     opts
@@ -69,7 +43,7 @@ function Base.copy(m::GLPKMathProgModelLP)
     return GLPKMathProgModelLP(m2inner, m.method, deepcopy(m.param), m.infeasible_bounds)
 end
 
-function LinearQuadraticModel(s::GLPKSolverLP)
+function MPB.LinearQuadraticModel(s::GLPKSolverLP)
     if s.method == :Simplex || s.method == :Exact
         param = GLPK.SimplexParam()
         if s.presolve
@@ -78,7 +52,7 @@ function LinearQuadraticModel(s::GLPKSolverLP)
     elseif s.method == :InteriorPoint
         param = GLPK.InteriorParam()
         if s.presolve
-            warn("Ignored option: presolve")
+            Compat.@warn("Ignored option: presolve")
         end
     else
         error("This is a bug")
@@ -90,24 +64,24 @@ function LinearQuadraticModel(s::GLPKSolverLP)
             t = typeof(param).types[i]
             setfield!(param, i, convert(t, v))
         else
-            warn("Ignored option: $(string(k))")
+            Compat.@warn("Ignored option: $(string(k))")
         end
     end
     lpm = GLPKMathProgModelLP(GLPK.Prob(), s.method, param, false)
     return lpm
 end
 
-function optimize!(lpm::GLPKMathProgModelLP)
+function MPB.optimize!(lpm::GLPKMathProgModelLP)
     lpm.infeasible_bounds = false
     lp = lpm.inner
-    for c in 1:numvar(lpm)
+    for c in 1:MPB.numvar(lpm)
         if GLPK.get_col_lb(lp, c) > GLPK.get_col_ub(lp, c)
             lpm.infeasible_bounds = true
             break
         end
     end
     if !lpm.infeasible_bounds
-        for r in 1:numconstr(lpm)
+        for r in 1:MPB.numconstr(lpm)
             if GLPK.get_row_lb(lp, r) > GLPK.get_row_ub(lp, r)
                 lpm.infeasible_bounds = true
                 break
@@ -128,7 +102,7 @@ function optimize!(lpm::GLPKMathProgModelLP)
     end
 end
 
-function status(lpm::GLPKMathProgModelLP)
+function MPB.status(lpm::GLPKMathProgModelLP)
     if lpm.infeasible_bounds
         return :Infeasible
     end
@@ -157,7 +131,7 @@ function status(lpm::GLPKMathProgModelLP)
     end
 end
 
-function getobjval(lpm::GLPKMathProgModelLP)
+function MPB.getobjval(lpm::GLPKMathProgModelLP)
     if lpm.infeasible_bounds
         if GLPK.get_obj_dir(lpm.inner) == GLPK.MAX
             return -Inf
@@ -182,7 +156,7 @@ function check_feasible_bounds(lpm::GLPKMathProgModelLP, name::String)
 end
 
 
-function getsolution(lpm::GLPKMathProgModelLP)
+function MPB.getsolution(lpm::GLPKMathProgModelLP)
     check_feasible_bounds(lpm, "getsolution")
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
@@ -195,14 +169,10 @@ function getsolution(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array{Float64}(n)
-    for c = 1:n
-        x[c] = get_col_prim(lp, c)
-    end
-    return x
+    return [get_col_prim(lp, i) for i in 1:n]
 end
 
-function getconstrsolution(lpm::GLPKMathProgModelLP)
+function MPB.getconstrsolution(lpm::GLPKMathProgModelLP)
     check_feasible_bounds(lpm, "getconstrsolution")
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
@@ -215,14 +185,10 @@ function getconstrsolution(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array{Float64}(m)
-    for r = 1:m
-        x[r] = get_row_prim(lp, r)
-    end
-    return x
+    return [get_row_prim(lp, i) for i in 1:m]
 end
 
-function getreducedcosts(lpm::GLPKMathProgModelLP)
+function MPB.getreducedcosts(lpm::GLPKMathProgModelLP)
     check_feasible_bounds(lpm, "getreducedcosts")
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
@@ -235,14 +201,10 @@ function getreducedcosts(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array{Float64}(n)
-    for c = 1:n
-        x[c] = get_col_dual(lp, c)
-    end
-    return x
+    return [get_col_dual(lp, i) for i in 1:n]
 end
 
-function getconstrduals(lpm::GLPKMathProgModelLP)
+function MPB.getconstrduals(lpm::GLPKMathProgModelLP)
     check_feasible_bounds(lpm, "getconstrduals")
 
     lp = lpm.inner
@@ -256,11 +218,7 @@ function getconstrduals(lpm::GLPKMathProgModelLP)
         error("bug")
     end
 
-    x = Array{Float64}(m)
-    for r = 1:m
-        x[r] = get_row_dual(lp, r)
-    end
-    return x
+    return [get_row_dual(lp, i) for i in 1:m]
 end
 
 # The functions getinfeasibilityray and getunboundedray are adapted from code
@@ -278,10 +236,10 @@ end
 ### express or implied, and with no claim as to its suitability for any
 ### purpose.
 
-function getinfeasibilityray(lpm::GLPKMathProgModelLP)
+function MPB.getinfeasibilityray(lpm::GLPKMathProgModelLP)
     if lpm.infeasible_bounds
         # See https://github.com/JuliaOpt/GLPKMathProgInterface.jl/pull/34
-        return zeros(numconstr(lpm))
+        return zeros(MPB.numconstr(lpm))
     end
 
     lp = lpm.inner
@@ -360,7 +318,7 @@ function getinfeasibilityray(lpm::GLPKMathProgModelLP)
     return ray
 end
 
-function getunboundedray(lpm::GLPKMathProgModelLP)
+function MPB.getunboundedray(lpm::GLPKMathProgModelLP)
     check_feasible_bounds(lpm, "getreducedcosts")
 
     lp = lpm.inner
