@@ -1,62 +1,25 @@
 module GLPKInterfaceMIP
 
 import GLPK
-importall MathProgBase.SolverInterface
-importall ..GLPKInterfaceBase
+import MathProgBase
+const MPB = MathProgBase
+using ..GLPKInterfaceBase
+using Compat
+using Compat.SparseArrays
+using Compat.LinearAlgebra
 
-export
-    GLPKSolverMIP,
-    GLPKCallbackData,
-    optimize!,
-    loadproblem!,
-    writeproblem,
-    getvarLB,
-    setvarLB!,
-    getvarUB,
-    setvarUB!,
-    getconstrLB,
-    setconstrLB!,
-    getconstrUB,
-    setconstrUB!,
-    getobj,
-    setobj!,
-    addvar!,
-    addconstr!,
-    setsense!,
-    getsense,
-    numvar,
-    numconstr,
-    setvartype!,
-    status,
-    getobjval,
-    getsolution,
-    getconstrsolution,
-    getreducedcosts,
-    getconstrduals,
-    getrawsolver,
-    setlazycallback!,
-    setcutcallback!,
-    setheuristiccallback!,
-    cbaddlazy!,
-    cbgetlpsolution,
-    cbgetmipsolution,
-    cbgetstate,
-    cbgetobj,
-    cbgetbestbound,
-    cbgetexplorednodes,
-    cbaddcut!,
-    cbaddsolution
+export GLPKSolverMIP, GLPKCallbackData
 
 mutable struct GLPKMathProgModelMIP <: GLPKMathProgModel
     inner::GLPK.Prob
     param::GLPK.IntoptParam
     smplxparam::GLPK.SimplexParam
-    lazycb::Union{Function,Void}
-    cutcb::Union{Function,Void}
-    heuristiccb::Union{Function,Void}
-    infocb::Union{Function,Void}
+    lazycb::Union{Function,Nothing}
+    cutcb::Union{Function,Nothing}
+    heuristiccb::Union{Function,Nothing}
+    infocb::Union{Function,Nothing}
     objbound::Float64
-    cbdata::MathProgCallbackData
+    cbdata::MPB.MathProgCallbackData
     binaries::Vector{Int}
     userlimit::Bool
     function GLPKMathProgModelMIP()
@@ -93,9 +56,9 @@ function Base.copy(m::GLPKMathProgModelMIP)
     return m2
 end
 
-mutable struct GLPKCallbackData <: MathProgCallbackData
+mutable struct GLPKCallbackData <: MPB.MathProgCallbackData
     model::GLPKMathProgModelMIP
-    tree::Ptr{Void}
+    tree::Ptr{Cvoid}
     state::Symbol
     reason::Cint
     sol::Vector{Float64}
@@ -103,7 +66,7 @@ mutable struct GLPKCallbackData <: MathProgCallbackData
     GLPKCallbackData(model::GLPKMathProgModelMIP) = new(model, C_NULL, :Other, -1, Float64[], Char[])
 end
 
-mutable struct GLPKSolverMIP <: AbstractMathProgSolver
+mutable struct GLPKSolverMIP <: MPB.AbstractMathProgSolver
     presolve::Bool
     opts
     GLPKSolverMIP(;presolve::Bool=false, opts...) = new(presolve, opts)
@@ -111,7 +74,7 @@ end
 
 callback_abort(stat, tree) = (stat == :Exit && GLPK.ios_terminate(tree))
 
-function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
+function _internal_callback(tree::Ptr{Cvoid}, info::Ptr{Cvoid})
     cb_data = unsafe_pointer_to_objref(info)::GLPKCallbackData
     lpm = cb_data.model
     cb_data.tree = tree
@@ -131,7 +94,7 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
         # if the current solution is actually integer feasible, then
         # return MIPSol status.
         _initsolution!(cb_data)
-        cbgetlpsolution(cb_data, cb_data.sol)
+        MPB.cbgetlpsolution(cb_data, cb_data.sol)
         # tol_int = 1e-5 by default
         # TODO: query from GLPK
         all_integer = true
@@ -189,7 +152,7 @@ function _internal_callback(tree::Ptr{Void}, info::Ptr{Void})
     return
 end
 
-function LinearQuadraticModel(s::GLPKSolverMIP)
+function MPB.LinearQuadraticModel(s::GLPKSolverMIP)
     lpm = GLPKMathProgModelMIP()
     lpm.param.msg_lev = GLPK.MSG_ERR
     lpm.smplxparam.msg_lev = GLPK.MSG_ERR
@@ -197,12 +160,12 @@ function LinearQuadraticModel(s::GLPKSolverMIP)
         lpm.param.presolve = GLPK.ON
     end
 
-    lpm.param.cb_func = cfunction(_internal_callback, Void, (Ptr{Void}, Ptr{Void}))
+    lpm.param.cb_func = cfunction(_internal_callback, Cvoid, Tuple{Ptr{Cvoid}, Ptr{Cvoid}})
     lpm.param.cb_info = pointer_from_objref(lpm.cbdata)
 
     for (k,v) in s.opts
         if k in [:cb_func, :cb_info]
-            warn("ignored option: $(string(k)); use the MathProgBase callback interface instead")
+            Compat.@warn("ignored option: $(string(k)); use the MathProgBase callback interface instead")
             continue
         end
         i = findfirst(x->x==k, fieldnames(typeof(lpm.param)))
@@ -214,7 +177,7 @@ function LinearQuadraticModel(s::GLPKSolverMIP)
             t = typeof(lpm.smplxparam).types[s]
             setfield!(lpm.smplxparam, s, convert(t, v))
         else
-            warn("Ignored option: $(string(k))")
+            Compat.@warn("Ignored option: $(string(k))")
             continue
         end
     end
@@ -222,7 +185,7 @@ function LinearQuadraticModel(s::GLPKSolverMIP)
     return lpm
 end
 
-function setparameters!(s::GLPKSolverMIP; mpboptions...)
+function MPB.setparameters!(s::GLPKSolverMIP; mpboptions...)
     opts = collect(Any, s.opts)
     for (optname, optval) in mpboptions
         if optname == :TimeLimit
@@ -239,7 +202,7 @@ function setparameters!(s::GLPKSolverMIP; mpboptions...)
     nothing
 end
 
-function setparameters!(m::GLPKMathProgModelMIP; mpboptions...)
+function MPB.setparameters!(m::GLPKMathProgModelMIP; mpboptions...)
     for (optname, optval) in mpboptions
         if optname == :TimeLimit
             m.param.tm_lim = round(Int,1000*optval)
@@ -254,17 +217,17 @@ function setparameters!(m::GLPKMathProgModelMIP; mpboptions...)
     end
 end
 
-setlazycallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.lazycb = f)
-setcutcallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.cutcb = f)
-setheuristiccallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.heuristiccb = f)
-setinfocallback!(m::GLPKMathProgModel, f::Union{Function,Void}) = (m.infocb = f)
+MPB.setlazycallback!(m::GLPKMathProgModel, f::Union{Function,Nothing}) = (m.lazycb = f)
+MPB.setcutcallback!(m::GLPKMathProgModel, f::Union{Function,Nothing}) = (m.cutcb = f)
+MPB.setheuristiccallback!(m::GLPKMathProgModel, f::Union{Function,Nothing}) = (m.heuristiccb = f)
+MPB.setinfocallback!(m::GLPKMathProgModel, f::Union{Function,Nothing}) = (m.infocb = f)
 
 _check_tree(d::GLPKCallbackData, funcname::AbstractString) =
     (d.tree != C_NULL && d.reason != -1) || error("$funcname can only be called from within a callback")
 
 cbgetstate(d::GLPKCallbackData) = d.state
 
-function cbgetlpsolution(d::GLPKCallbackData, output::Vector)
+function MPB.cbgetlpsolution(d::GLPKCallbackData, output::Vector)
     _check_tree(d, "cbgetlpsolution")
     lp = GLPK.ios_get_prob(d.tree)
     n = GLPK.get_num_cols(lp)
@@ -276,7 +239,7 @@ function cbgetlpsolution(d::GLPKCallbackData, output::Vector)
     return output
 end
 
-function cbgetlpsolution(d::GLPKCallbackData)
+function MPB.cbgetlpsolution(d::GLPKCallbackData)
     _check_tree(d, "cbgetlpsolution")
     lp = GLPK.ios_get_prob(d.tree)
     n = GLPK.get_num_cols(lp)
@@ -289,34 +252,34 @@ function cbgetlpsolution(d::GLPKCallbackData)
 end
 
 
-function cbgetmipsolution(d::GLPKCallbackData, output::Vector)
+function MPB.cbgetmipsolution(d::GLPKCallbackData, output::Vector)
     # assuming we're in the lazy callback where
     # the LP solution is actually integral.
     # If we add an informational callback for GLPK.IBINGO,
     # then this will need to be modified.
     return cbgetlpsolution(d, output)
 end
-cbgetmipsolution(d::GLPKCallbackData) = cbgetlpsolution(d)
+MPB.cbgetmipsolution(d::GLPKCallbackData) = cbgetlpsolution(d)
 
-function cbgetbestbound(d::GLPKCallbackData)
+function MPB.cbgetbestbound(d::GLPKCallbackData)
     _check_tree(d, "cbbestbound")
     lpm = d.model
     return lpm.objbound
 end
 
-function cbgetobj(d::GLPKCallbackData)
+function MPB.cbgetobj(d::GLPKCallbackData)
     _check_tree(d, "cbgetobj")
     lp = GLPK.ios_get_prob(d.tree)
     return GLPK.mip_obj_val(lp)
 end
 
-function cbgetexplorednodes(d::GLPKCallbackData)
+function MPB.cbgetexplorednodes(d::GLPKCallbackData)
     _check_tree(d, "cbgetexplorednodes")
     a, _, t = GLPK.ios_tree_size(d.tree)
     return t - a
 end
 
-function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
+function MPB.cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
     #println("Adding lazy")
     (d.tree != C_NULL && d.reason == GLPK.IROWGEN) ||
         error("cbaddlazy! can only be called from within a lazycallback")
@@ -354,7 +317,7 @@ function cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense:
     return
 end
 
-function cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
+function MPB.cbaddcut!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, sense::Char, rhs::Real)
     #println("Adding cut")
     (d.tree != C_NULL && d.reason == GLPK.ICUTGEN) ||
         error("cbaddcut! can only be called from within a cutcallback")
@@ -390,7 +353,7 @@ function _fillsolution!(d::GLPKCallbackData)
     end
 end
 
-function cbaddsolution!(d::GLPKCallbackData)
+function MPB.cbaddsolution!(d::GLPKCallbackData)
     #println("Adding sol")
     (d.tree != C_NULL && d.reason == GLPK.IHEUR) ||
         error("cbaddsolution! can only be called from within a heuristiccallback")
@@ -401,7 +364,7 @@ function cbaddsolution!(d::GLPKCallbackData)
     u = getvarUB(d.model)
     for i in 1:length(l)
         if d.sol[i] < l[i] - 1e-6 || d.sol[i] > u[i] + 1e-6
-            warn("Ignoring infeasible solution from heuristic callback")
+            Compat.@warn("Ignoring infeasible solution from heuristic callback")
             return
         end
     end
@@ -411,7 +374,7 @@ function cbaddsolution!(d::GLPKCallbackData)
     y = A*d.sol
     for i in 1:length(lb)
         if y[i] < lb[i] - 1e-6 || y[i] > ub[i] + 1e-6
-            warn("Ignoring infeasible solution from heuristic callback")
+            Compat.@warn("Ignoring infeasible solution from heuristic callback")
             return
         end
     end
@@ -419,13 +382,13 @@ function cbaddsolution!(d::GLPKCallbackData)
     fill!(d.sol, NaN)
 end
 
-function cbsetsolutionvalue!(d::GLPKCallbackData, idx::Integer, val::Real)
+function MPB.cbsetsolutionvalue!(d::GLPKCallbackData, idx::Integer, val::Real)
     _check_tree(d, "cbsetsolutionvalue!")
     _initsolution!(d)
     d.sol[idx] = val
 end
 
-function setsense!(lpm::GLPKMathProgModelMIP, sense)
+function MPB.setsense!(lpm::GLPKMathProgModelMIP, sense)
     lp = lpm.inner
     if sense == :Min
         GLPK.set_obj_dir(lp, GLPK.MIN)
@@ -438,10 +401,10 @@ function setsense!(lpm::GLPKMathProgModelMIP, sense)
     end
 end
 
-function setvartype!(lpm::GLPKMathProgModelMIP, vartype::Vector{Symbol})
+function MPB.setvartype!(lpm::GLPKMathProgModelMIP, vartype::Vector{Symbol})
     lp = lpm.inner
     lpm.binaries = Int[]
-    ncol = numvar(lpm)
+    ncol = MPB.numvar(lpm)
     @assert length(vartype) == ncol
     for i in 1:ncol
         if vartype[i] == :Int
@@ -464,10 +427,10 @@ const vartype_map = Dict(
     GLPK.BV => :Bin
 )
 
-function getvartype(lpm::GLPKMathProgModelMIP)
+function MPB.getvartype(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
-    ncol = numvar(lpm)
-    coltype = Array{Symbol}(ncol)
+    ncol = MPB.numvar(lpm)
+    coltype = Array{Symbol}(undef, ncol)
     for i in 1:ncol
         ct = GLPK.get_col_kind(lp, i)
         coltype[i] = vartype_map[ct]
@@ -480,10 +443,10 @@ function getvartype(lpm::GLPKMathProgModelMIP)
     return coltype
 end
 
-function optimize!(lpm::GLPKMathProgModelMIP)
-    vartype = getvartype(lpm)
-    lb = getvarLB(lpm)
-    ub = getvarUB(lpm)
+function MPB.optimize!(lpm::GLPKMathProgModelMIP)
+    vartype = MPB.getvartype(lpm)
+    lb = MPB.getvarLB(lpm)
+    ub = MPB.getvarUB(lpm)
     old_lb = copy(lb)
     old_ub = copy(ub)
     for c in 1:length(vartype)
@@ -492,8 +455,8 @@ function optimize!(lpm::GLPKMathProgModelMIP)
     end
     lpm.cbdata.vartype = vartype
     try
-        setvarLB!(lpm, lb)
-        setvarUB!(lpm, ub)
+        MPB.setvarLB!(lpm, lb)
+        MPB.setvarUB!(lpm, ub)
         if lpm.param.presolve == GLPK.OFF
             ret_ps = GLPK.simplex(lpm.inner, lpm.smplxparam)
             ret_ps != 0 && return ret_ps
@@ -503,12 +466,12 @@ function optimize!(lpm::GLPKMathProgModelMIP)
             lpm.userlimit = true
         end
     finally
-        setvarLB!(lpm, old_lb)
-        setvarUB!(lpm, old_ub)
+        MPB.setvarLB!(lpm, old_lb)
+        MPB.setvarUB!(lpm, old_ub)
     end
 end
 
-function status(lpm::GLPKMathProgModelMIP)
+function MPB.status(lpm::GLPKMathProgModelMIP)
     if lpm.userlimit
         return :UserLimit
     end
@@ -537,7 +500,7 @@ function status(lpm::GLPKMathProgModelMIP)
     end
 end
 
-function getobjval(lpm::GLPKMathProgModelMIP)
+function MPB.getobjval(lpm::GLPKMathProgModelMIP)
     status = GLPK.mip_status(lpm.inner)
     if status == GLPK.UNDEF || status == GLPK.NOFEAS
         # no feasible solution so objective is NaN
@@ -547,7 +510,7 @@ function getobjval(lpm::GLPKMathProgModelMIP)
     return GLPK.mip_obj_val(lpm.inner)
 end
 
-function getobjbound(lpm::GLPKMathProgModelMIP)
+function MPB.getobjbound(lpm::GLPKMathProgModelMIP)
     # This is a hack. We observed some cases where mip_status == OPT
     # and objval and objbound didn't match.
     # We can fix this case, but objbound may still be incorrect in
@@ -559,7 +522,7 @@ function getobjbound(lpm::GLPKMathProgModelMIP)
     end
 end
 
-function getsolution(lpm::GLPKMathProgModelMIP)
+function MPB.getsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     n = GLPK.get_num_cols(lp)
     status = GLPK.mip_status(lpm.inner)
@@ -568,22 +531,14 @@ function getsolution(lpm::GLPKMathProgModelMIP)
         return fill(NaN, n)
     end
 
-    x = Array{Float64}(n)
-    for c = 1:n
-        x[c] = GLPK.mip_col_val(lp, c)
-    end
-    return x
+    return [GLPK.mip_col_val(lp, i) for i in 1:n]
 end
 
-function getconstrsolution(lpm::GLPKMathProgModelMIP)
+function MPB.getconstrsolution(lpm::GLPKMathProgModelMIP)
     lp = lpm.inner
     m = GLPK.get_num_rows(lp)
 
-    x = Array{Float64}(m)
-    for r = 1:m
-        x[r] = GLPK.mip_row_val(lp, r)
-    end
-    return x
+    return [GLPK.mip_row_val(lp, i) for i in 1:m]
 end
 
 end
