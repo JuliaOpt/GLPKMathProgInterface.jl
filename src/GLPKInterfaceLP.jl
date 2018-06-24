@@ -71,6 +71,38 @@ function MPB.LinearQuadraticModel(s::GLPKSolverLP)
     return lpm
 end
 
+function MPB.setparameters!(s::GLPKSolverLP; mpboptions...)
+    opts = collect(Any, s.opts)
+    for (optname, optval) in mpboptions
+        if optname == :TimeLimit
+            push!(opts, (:tm_lim,round(Int,1000*optval))) # milliseconds
+        elseif optname == :Silent
+            if optval == true
+                push!(opts, (:msg_lev,GLPK.MSG_OFF))
+            end
+        else
+            error("Unrecognized parameter $optname")
+        end
+    end
+    s.opts = opts
+    nothing
+end
+
+function MPB.setparameters!(m::GLPKMathProgModelLP; mpboptions...)
+    for (optname, optval) in mpboptions
+        if optname == :TimeLimit
+            m.param.tm_lim = round(Int,1000*optval)
+        elseif optname == :Silent
+            if optval == true
+                m.param.msg_lev = GLPK.MSG_OFF
+                m.smplxparam.msg_lev = GLPK.MSG_OFF
+            end
+        else
+            error("Unrecognized parameter $optname")
+        end
+    end
+end
+
 function MPB.optimize!(lpm::GLPKMathProgModelLP)
     lpm.infeasible_bounds = false
     lp = lpm.inner
