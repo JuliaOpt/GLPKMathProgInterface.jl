@@ -44,7 +44,7 @@ function MPB.loadproblem!(lpm::GLPKMathProgModel, A::AbstractMatrix, collb, colu
     checksize(rowub, m, "rowub")
     checksize(obj, n, "obj")
 
-    (ia, ja, ar) = findnz(A)
+    (ia, ja, ar) = findnz(sparse(A))
 
     GLPK.erase_prob(lp)
 
