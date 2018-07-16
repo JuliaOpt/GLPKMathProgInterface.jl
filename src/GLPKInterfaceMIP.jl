@@ -160,7 +160,7 @@ function MPB.LinearQuadraticModel(s::GLPKSolverMIP)
         lpm.param.presolve = GLPK.ON
     end
 
-    lpm.param.cb_func = cfunction(_internal_callback, Cvoid, Tuple{Ptr{Cvoid}, Ptr{Cvoid}})
+    lpm.param.cb_func = @cfunction(_internal_callback, Cvoid, (Ptr{Cvoid}, Ptr{Cvoid}))
     lpm.param.cb_info = pointer_from_objref(lpm.cbdata)
 
     for (k,v) in s.opts
