@@ -225,7 +225,7 @@ MPB.setinfocallback!(m::GLPKMathProgModel, f::Union{Function,Nothing}) = (m.info
 _check_tree(d::GLPKCallbackData, funcname::AbstractString) =
     (d.tree != C_NULL && d.reason != -1) || error("$funcname can only be called from within a callback")
 
-cbgetstate(d::GLPKCallbackData) = d.state
+MPB.cbgetstate(d::GLPKCallbackData) = d.state
 
 function MPB.cbgetlpsolution(d::GLPKCallbackData, output::Vector)
     _check_tree(d, "cbgetlpsolution")
@@ -257,9 +257,9 @@ function MPB.cbgetmipsolution(d::GLPKCallbackData, output::Vector)
     # the LP solution is actually integral.
     # If we add an informational callback for GLPK.IBINGO,
     # then this will need to be modified.
-    return cbgetlpsolution(d, output)
+    return MPB.cbgetlpsolution(d, output)
 end
-MPB.cbgetmipsolution(d::GLPKCallbackData) = cbgetlpsolution(d)
+MPB.cbgetmipsolution(d::GLPKCallbackData) = MPB.cbgetlpsolution(d)
 
 function MPB.cbgetbestbound(d::GLPKCallbackData)
     _check_tree(d, "cbbestbound")
@@ -300,7 +300,7 @@ function MPB.cbaddlazy!(d::GLPKCallbackData, colidx::Vector, colcoef::Vector, se
         error("sense must be '=', '<' or '>'")
     end
     # allocating a new vector is not efficient
-    solution = cbgetmipsolution(d)
+    solution = MPB.cbgetmipsolution(d)
     # if the cut does not exclude the current solution, ignore it
     val = dot(colcoef,solution[colidx])
     if (rowlb - 1e-8 <= val <= rowub + 1e-8)
@@ -360,17 +360,17 @@ function MPB.cbaddsolution!(d::GLPKCallbackData)
     _initsolution!(d)
     _fillsolution!(d)
     # test feasibility of solution, would be better if GLPK supported this
-    l = getvarLB(d.model)
-    u = getvarUB(d.model)
+    l = MPB.getvarLB(d.model)
+    u = MPB.getvarUB(d.model)
     for i in 1:length(l)
         if d.sol[i] < l[i] - 1e-6 || d.sol[i] > u[i] + 1e-6
             Compat.@warn("Ignoring infeasible solution from heuristic callback")
             return
         end
     end
-    A = getconstrmatrix(d.model)
-    lb = getconstrLB(d.model)
-    ub = getconstrUB(d.model)
+    A = MPB.getconstrmatrix(d.model)
+    lb = MPB.getconstrLB(d.model)
+    ub = MPB.getconstrUB(d.model)
     y = A*d.sol
     for i in 1:length(lb)
         if y[i] < lb[i] - 1e-6 || y[i] > ub[i] + 1e-6
