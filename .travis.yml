@@ -5,11 +5,7 @@ os:
 julia:
   - 0.6
   - 0.7
-  - nightly
-env:
-  matrix:
-    - CC="gcc"
-    - CC="clang"
+  - 1.0
 notifications:
   email: false
 sudo: false # use a docker worker
