@@ -387,7 +387,7 @@ function MPB.getunboundedray(lpm::GLPKMathProgModelLP)
         end
 
         if (GLPK.get_obj_dir(lp) == GLPK.MAX) ⊻ (get_dual(lp, k) > 0)
-            scale!(ray, -1.0)
+            ray = ray * -1.0
         end
     else
         for i = 1:n
