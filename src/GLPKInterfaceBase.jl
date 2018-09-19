@@ -108,7 +108,7 @@ function MPB.getvarLB(lpm::GLPKMathProgModel)
     lb = Array{Float64}(undef, n)
     for c = 1:n
         l = GLPK.get_col_lb(lp, c)
-        if l <= - floatmax(Float64)
+        if l <= -floatmax(Float64)
             l = -Inf
         end
         lb[c] = l
@@ -126,7 +126,7 @@ function MPB.setvarLB!(lpm::GLPKMathProgModel, collb)
     GLPK.jl_set_preemptive_check(false)
     for c = 1:n
         u = GLPK.get_col_ub(lp, c)
-        if u >=  floatmax(Float64)
+        if u >= floatmax(Float64)
             u = Inf
         end
         if nonnull(collb) && collb[c] != -Inf
@@ -157,7 +157,7 @@ function MPB.getvarUB(lpm::GLPKMathProgModel)
     ub = Array{Float64}(undef, n)
     for c = 1:n
         u = GLPK.get_col_ub(lp, c)
-        if u >=  floatmax(Float64)
+        if u >= floatmax(Float64)
             u = Inf
         end
         ub[c] = u
@@ -175,7 +175,7 @@ function MPB.setvarUB!(lpm::GLPKMathProgModel, colub)
     GLPK.jl_set_preemptive_check(false)
     for c = 1:n
         l = GLPK.get_col_lb(lp, c)
-        if l <= - floatmax(Float64)
+        if l <= -floatmax(Float64)
             l = -Inf
         end
         if nonnull(colub) && colub[c] != Inf
@@ -206,7 +206,7 @@ function MPB.getconstrLB(lpm::GLPKMathProgModel)
     lb = Array{Float64}(undef, m)
     for r = 1:m
         l = GLPK.get_row_lb(lp, r)
-        if l <= - floatmax(Float64)
+        if l <= -floatmax(Float64)
             l = -Inf
         end
         lb[r] = l
@@ -224,7 +224,7 @@ function MPB.setconstrLB!(lpm::GLPKMathProgModel, rowlb)
     GLPK.jl_set_preemptive_check(false)
     for r = 1:m
         u = GLPK.get_row_ub(lp, r)
-        if u >=  floatmax(Float64)
+        if u >= floatmax(Float64)
             u = Inf
         end
         if nonnull(rowlb) && rowlb[r] != -Inf
@@ -255,7 +255,7 @@ function MPB.getconstrUB(lpm::GLPKMathProgModel)
     ub = zeros(m)
     for r = 1:m
         u = GLPK.get_row_ub(lp, r)
-        if u >=  floatmax(Float64)
+        if u >= floatmax(Float64)
             u = Inf
         end
         ub[r] = u
@@ -273,7 +273,7 @@ function MPB.setconstrUB!(lpm::GLPKMathProgModel, rowub)
     GLPK.jl_set_preemptive_check(false)
     for r = 1:m
         l = GLPK.get_row_lb(lp, r)
-        if l <= - floatmax(Float64)
+        if l <= -floatmax(Float64)
             l = -Inf
         end
         if nonnull(rowub) && rowub[r] != Inf
