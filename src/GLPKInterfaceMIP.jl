@@ -41,14 +41,14 @@ function Base.copy(m::GLPKMathProgModelMIP)
     m2.param = deepcopy(m.param)
     m2.smplxparam = deepcopy(m.smplxparam)
 
-    m.lazycb == nothing || Base.warn_once("Callbacks can't be copied, lazy callback ignored")
-    m.cutcb == nothing || Base.warn_once("Callbacks can't be copied, cut callback ignored")
-    m.heuristiccb == nothing || Base.warn_once("Callbacks can't be copied, heuristic callback ignored")
-    m.infocb == nothing || Base.warn_once("Callbacks can't be copied, info callback ignored")
+    m.lazycb == nothing || @Compat.warn "Callbacks can't be copied, lazy callback ignored"
+    m.cutcb == nothing || @Compat.warn "Callbacks can't be copied, cut callback ignored"
+    m.heuristiccb == nothing || @Compat.warn "Callbacks can't be copied, heuristic callback ignored"
+    m.infocb == nothing || @Compat.warn "Callbacks can't be copied, info callback ignored"
 
     m2.objbound = m.objbound
 
-    m.cbdata == nothing || Base.warn_once("Callbacks can't be copied, callbackdata ignored")
+    m.cbdata == nothing || @Compat.warn "Callbacks can't be copied, callbackdata ignored"
 
     m2.binaries = deepcopy(m.binaries)
     m2.userlimit = m.userlimit
@@ -243,7 +243,7 @@ function MPB.cbgetlpsolution(d::GLPKCallbackData)
     _check_tree(d, "cbgetlpsolution")
     lp = GLPK.ios_get_prob(d.tree)
     n = GLPK.get_num_cols(lp)
-    output = Vector{Float64}(n)
+    output = Vector{Float64}(undef, n)
 
     for c = 1:n
         output[c] = GLPK.get_col_prim(lp, c)
