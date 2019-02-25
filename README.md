@@ -5,6 +5,13 @@ GLPKMathProgInterface.jl
 [![GLPKMathProgInterface](http://pkg.julialang.org/badges/GLPKMathProgInterface_0.6.svg)](https://pkg.julialang.org/detail/GLPKMathProgInterface)
 [![GLPKMathProgInterface](http://pkg.julialang.org/badges/GLPKMathProgInterface_0.7.svg)](https://pkg.julialang.org/detail/GLPKMathProgInterface)
 
+**Note: This package is an interface between [GLPK.jl](https://github.com/JuliaOpt/GLPK.jl) 
+and [MathProgBase.jl](https://github.com/JuliaOpt/MathProgBase.jl). As of [JuMP.jl](https://github.com/JuliaOpt/JuMP.jl)
+v0.19, MathProgBase is deprecated in favor of [MathOptInterface.jl](https://github.com/JuliaOpt/MathOptInterface.jl).**
+
+**To use GLPK with JuMP 0.19 and MathOptInterface, the
+[GLPK.jl](https://github.com/JuliaOpt/GLPK.jl) package provides `GLPK.Optimizer`.**
+
 Interface between the [GLPK.jl] wrapper and [MathProgBase.jl].
 With this package, you can use the GLPK solver in MathProgBase.jl
 
