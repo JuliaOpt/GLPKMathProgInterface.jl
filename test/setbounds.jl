@@ -1,5 +1,5 @@
 using GLPKMathProgInterface, MathProgBase
-using Compat.Test
+using Test
 
 @testset "Invalid bounds" begin
     solver = GLPKSolverLP()

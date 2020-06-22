@@ -1,8 +1,7 @@
 module GLPKInterfaceLP
 
-using Compat
-using Compat.SparseArrays
-using Compat.LinearAlgebra
+using SparseArrays
+using LinearAlgebra
 
 import GLPK
 import MathProgBase
@@ -52,7 +51,7 @@ function MPB.LinearQuadraticModel(s::GLPKSolverLP)
     elseif s.method == :InteriorPoint
         param = GLPK.InteriorParam()
         if s.presolve
-            Compat.@warn("Ignored option: presolve")
+            @warn "Ignored option: presolve"
         end
     else
         error("This is a bug")
@@ -64,7 +63,7 @@ function MPB.LinearQuadraticModel(s::GLPKSolverLP)
             t = typeof(param).types[i]
             setfield!(param, i, convert(t, v))
         else
-            Compat.@warn("Ignored option: $(string(k))")
+            @warn "Ignored option: $(string(k))"
         end
     end
     lpm = GLPKMathProgModelLP(GLPK.Prob(), s.method, param, false)

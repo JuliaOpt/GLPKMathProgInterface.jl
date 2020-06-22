@@ -1,7 +1,6 @@
-import Compat.Pkg
+const mathprogbase_test = joinpath(dirname(pathof(MathProgBase)), "..", "test")
 
 @testset "MathProgBase tests" begin
-    mathprogbase_test = joinpath(Pkg.dir("MathProgBase"), "test")
 
     include(joinpath(mathprogbase_test, "linprog.jl"))
     linprogtest(GLPKSolverLP())
