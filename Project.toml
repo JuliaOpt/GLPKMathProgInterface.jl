@@ -1,0 +1,20 @@
+name = "GLPKMathProgInterface"
+uuid = "3c7084bd-78ad-589a-b5bb-dbd673274bea"
+version = "0.4.5"
+
+[deps]
+GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MathProgBase = "fdba3010-5040-5b88-9595-932c9decdf73"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[compat]
+GLPK = "0.6,0.7,0.8,0.9,0.10,0.11,0.12,0.13"
+MathProgBase = "0.5,0.7,0.8"
+julia = "0.6,0.7,1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

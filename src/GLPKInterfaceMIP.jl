@@ -4,9 +4,8 @@ import GLPK
 import MathProgBase
 const MPB = MathProgBase
 using ..GLPKInterfaceBase
-using Compat
-using Compat.SparseArrays
-using Compat.LinearAlgebra
+using SparseArrays
+using LinearAlgebra
 
 export GLPKSolverMIP, GLPKCallbackData
 
@@ -41,14 +40,14 @@ function Base.copy(m::GLPKMathProgModelMIP)
     m2.param = deepcopy(m.param)
     m2.smplxparam = deepcopy(m.smplxparam)
 
-    m.lazycb == nothing || @Compat.warn "Callbacks can't be copied, lazy callback ignored"
-    m.cutcb == nothing || @Compat.warn "Callbacks can't be copied, cut callback ignored"
-    m.heuristiccb == nothing || @Compat.warn "Callbacks can't be copied, heuristic callback ignored"
-    m.infocb == nothing || @Compat.warn "Callbacks can't be copied, info callback ignored"
+    m.lazycb == nothing || @warn "Callbacks can't be copied, lazy callback ignored"
+    m.cutcb == nothing || @warn "Callbacks can't be copied, cut callback ignored"
+    m.heuristiccb == nothing || @warn "Callbacks can't be copied, heuristic callback ignored"
+    m.infocb == nothing || @warn "Callbacks can't be copied, info callback ignored"
 
     m2.objbound = m.objbound
 
-    m.cbdata == nothing || @Compat.warn "Callbacks can't be copied, callbackdata ignored"
+    m.cbdata == nothing || @warn "Callbacks can't be copied, callbackdata ignored"
 
     m2.binaries = deepcopy(m.binaries)
     m2.userlimit = m.userlimit
@@ -165,7 +164,7 @@ function MPB.LinearQuadraticModel(s::GLPKSolverMIP)
 
     for (k,v) in s.opts
         if k in [:cb_func, :cb_info]
-            Compat.@warn("ignored option: $(string(k)); use the MathProgBase callback interface instead")
+            @warn "ignored option: $(string(k)); use the MathProgBase callback interface instead"
             continue
         end
         i = findfirst(x->x==k, fieldnames(typeof(lpm.param)))
@@ -177,7 +176,7 @@ function MPB.LinearQuadraticModel(s::GLPKSolverMIP)
             t = typeof(lpm.smplxparam).types[s]
             setfield!(lpm.smplxparam, s, convert(t, v))
         else
-            Compat.@warn("Ignored option: $(string(k))")
+            @warn "Ignored option: $(string(k))"
             continue
         end
     end
@@ -364,7 +363,7 @@ function MPB.cbaddsolution!(d::GLPKCallbackData)
     u = MPB.getvarUB(d.model)
     for i in 1:length(l)
         if d.sol[i] < l[i] - 1e-6 || d.sol[i] > u[i] + 1e-6
-            Compat.@warn("Ignoring infeasible solution from heuristic callback")
+            @warn "Ignoring infeasible solution from heuristic callback"
             return
         end
     end
@@ -374,7 +373,7 @@ function MPB.cbaddsolution!(d::GLPKCallbackData)
     y = A*d.sol
     for i in 1:length(lb)
         if y[i] < lb[i] - 1e-6 || y[i] > ub[i] + 1e-6
-            Compat.@warn("Ignoring infeasible solution from heuristic callback")
+            @warn "Ignoring infeasible solution from heuristic callback"
             return
         end
     end

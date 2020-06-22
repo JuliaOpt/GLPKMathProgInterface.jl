@@ -1,8 +1,7 @@
 module GLPKInterfaceBase
 
-using Compat
-using Compat.SparseArrays
-using Compat.LinearAlgebra
+using SparseArrays
+using LinearAlgebra
 import GLPK
 
 import MathProgBase

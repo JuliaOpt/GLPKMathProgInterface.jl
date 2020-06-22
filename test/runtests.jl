@@ -1,6 +1,6 @@
 using GLPKMathProgInterface, GLPK
 using MathProgBase
-using Compat.Test
+using Test
 
 include("params.jl")
 include("setbounds.jl")
